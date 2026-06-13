@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DroneMap — Prescripción Variable</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
+
+  /* Header */
+  header { background: #1a1d2e; border-bottom: 1px solid #2a2d3e; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 1.2rem; font-weight: 700; color: #7eb8f7; }
+  header .subtitle { font-size: 0.8rem; color: #888; }
+  .badge { background: #2d4a2d; color: #6abf6a; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+
+  /* Layout */
+  .main { display: flex; flex: 1; overflow: hidden; }
+  .sidebar { width: 360px; min-width: 320px; background: #13161f; overflow-y: auto; border-right: 1px solid #2a2d3e; padding: 16px; }
+  #map { flex: 1; }
+
+  /* Sections */
+  .section { background: #1a1d2e; border-radius: 10px; padding: 14px; margin-bottom: 14px; border: 1px solid #2a2d3e; }
+  .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #7eb8f7; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .section-title .icon { font-size: 1rem; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #2a2d3e; background: #0f1117; color: #aaa; font-size: 0.78rem; cursor: pointer; text-align: center; transition: all .2s; }
+  .tab.active { background: #1e3a5f; border-color: #4a90d9; color: #7eb8f7; font-weight: 600; }
+
+  /* Dropzone */
+  .dropzone { border: 2px dashed #3a4060; border-radius: 10px; padding: 24px 16px; text-align: center; cursor: pointer; transition: all .2s; background: #0f1117; }
+  .dropzone:hover, .dropzone.drag-over { border-color: #4a90d9; background: #141a2e; }
+  .dropzone .dz-icon { font-size: 2.4rem; margin-bottom: 8px; }
+  .dropzone .dz-text { font-size: 0.82rem; color: #888; }
+  .dropzone .dz-count { font-size: 0.78rem; color: #4a90d9; margin-top: 6px; font-weight: 600; }
+
+  /* Form elements */
+  label { font-size: 0.75rem; color: #aaa; display: block; margin-bottom: 4px; margin-top: 10px; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 7px 10px; border-radius: 7px;
+    border: 1px solid #2a2d3e; background: #0f1117; color: #e0e0e0;
+    font-size: 0.82rem;
+  }
+  input[type=range] { width: 100%; accent-color: #4a90d9; }
+  .range-row { display: flex; align-items: center; gap: 8px; }
+  .range-val { font-size: 0.8rem; color: #7eb8f7; min-width: 36px; text-align: right; }
+
+  /* Buttons */
+  .btn { width: 100%; padding: 9px 16px; border-radius: 8px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all .2s; margin-top: 10px; }
+  .btn-primary { background: #1e4a8f; color: #7eb8f7; }
+  .btn-primary:hover:not(:disabled) { background: #2560b8; }
+  .btn-success { background: #1a4a1a; color: #6abf6a; }
+  .btn-success:hover:not(:disabled) { background: #226022; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-sm { padding: 6px 12px; font-size: 0.76rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+
+  /* Progress */
+  .progress-bar { height: 6px; background: #2a2d3e; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #4a90d9, #7eb8f7); border-radius: 3px; transition: width .4s; }
+  .progress-text { font-size: 0.72rem; color: #888; margin-top: 4px; text-align: center; }
+
+  /* Status */
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+  .status-ready { background: #1a4a1a; color: #6abf6a; }
+  .status-processing { background: #1e3a5f; color: #7eb8f7; }
+  .status-error { background: #4a1a1a; color: #e07070; }
+
+  /* Index selector */
+  .index-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .index-btn { padding: 7px; border-radius: 7px; border: 1px solid #2a2d3e; background: #0f1117; color: #aaa; font-size: 0.76rem; cursor: pointer; text-align: center; transition: all .2s; }
+  .index-btn.active { border-color: #4a90d9; background: #1e3a5f; color: #7eb8f7; font-weight: 700; }
+
+  /* Download grid */
+  .dl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .dl-btn { padding: 8px 6px; border-radius: 8px; border: 1px solid #2a2d3e; background: #0f1117; color: #aaa; font-size: 0.73rem; cursor: pointer; text-align: center; transition: all .2s; }
+  .dl-btn:hover { border-color: #6abf6a; background: #1a2e1a; color: #6abf6a; }
+  .dl-btn .dl-icon { font-size: 1.2rem; display: block; margin-bottom: 3px; }
+  .dl-btn .dl-label { font-weight: 600; display: block; }
+  .dl-btn .dl-desc { font-size: 0.65rem; color: #666; display: block; }
+
+  /* Results */
+  .result-stat { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2d3e; }
+  .result-stat:last-child { border-bottom: none; }
+  .result-label { font-size: 0.76rem; color: #888; }
+  .result-val { font-size: 0.9rem; font-weight: 700; color: #7eb8f7; }
+  .result-val.warn { color: #f5a623; }
+  .result-val.ok { color: #6abf6a; }
+
+  /* ODM config */
+  .odm-config { background: #0f1117; border-radius: 8px; padding: 10px; margin-top: 8px; border: 1px dashed #3a4060; }
+
+  /* Legend */
+  .legend { position: absolute; bottom: 20px; right: 10px; z-index: 1000; background: rgba(20,22,35,0.92); border-radius: 10px; padding: 10px 14px; border: 1px solid #2a2d3e; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; margin-bottom: 4px; }
+  .legend-color { width: 16px; height: 16px; border-radius: 4px; }
+
+  .hidden { display: none; }
+  .error-msg { background: #4a1a1a; border-radius: 8px; padding: 10px; font-size: 0.78rem; color: #e07070; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🛸 DroneMap</h1>
+    <div class="subtitle">Prescripción Variable · Mavic 3 Multispectral</div>
+  </div>
+  <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+    <span class="badge">NDVI · NDRE · GNDVI · EVI</span>
+    <span class="badge" style="background:#2d2d4a;color:#a0a0f0;">ISO-XML · Shapefile · JD · KMZ</span>
+  </div>
+</header>
+
+<div class="main">
+<div class="sidebar">
+
+  <!-- Step 1: Upload -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📂</span> 1. Cargar datos</div>
+    <div class="tabs">
+      <div class="tab active" id="tab-geotiff" onclick="switchTab('geotiff')">Ortomosaico GeoTIFF</div>
+      <div class="tab" id="tab-photos" onclick="switchTab('photos')">Fotos crudas (ODM)</div>
+    </div>
+
+    <!-- GeoTIFF tab -->
+    <div id="panel-geotiff">
+      <div class="dropzone" id="dz-geotiff" onclick="document.getElementById('file-geotiff').click()">
+        <div class="dz-icon">🗺️</div>
+        <div class="dz-text">Arrastrá o hacé click para subir<br><small>GeoTIFF multiespectral de DJI Terra / Pix4D</small><br><small style="color:#666">Un archivo 5-bandas O archivos separados por banda (Blue/Green/Red/RedEdge/NIR)</small></div>
+        <div class="dz-count" id="geotiff-count"></div>
+      </div>
+      <input type="file" id="file-geotiff" multiple accept=".tif,.tiff" style="display:none" onchange="onGeotiffSelect(this)">
+      <button class="btn btn-primary" id="btn-upload-tif" onclick="uploadGeotiff()" disabled>⚡ Procesar ortomosaico</button>
+    </div>
+
+    <!-- Photos tab -->
+    <div id="panel-photos" class="hidden">
+      <div class="dropzone" id="dz-photos" onclick="document.getElementById('file-photos').click()">
+        <div class="dz-icon">📸</div>
+        <div class="dz-text">Fotos crudas del drone<br><small>JPG/TIF georreferenciadas de las 5 bandas</small></div>
+        <div class="dz-count" id="photos-count"></div>
+      </div>
+      <input type="file" id="file-photos" multiple accept=".jpg,.jpeg,.tif,.tiff" style="display:none" onchange="onPhotosSelect(this)">
+      <div class="odm-config">
+        <label>URL de WebODM / NodeODM</label>
+        <input type="text" id="odm-url" value="http://localhost:3000" placeholder="http://localhost:3000">
+        <label>Token JWT (si tiene autenticación)</label>
+        <input type="text" id="odm-token" placeholder="Opcional">
+      </div>
+      <button class="btn btn-primary" id="btn-upload-photos" onclick="uploadPhotos()" disabled>🚀 Enviar a ODM y procesar</button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="section hidden" id="progress-section">
+    <div class="section-title"><span class="icon">⏳</span> Progreso</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <span id="status-badge" class="status-badge status-processing">Procesando...</span>
+      <span id="job-id-label" style="font-size:0.7rem;color:#555;"></span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-text" id="progress-text">Iniciando...</div>
+  </div>
+
+  <!-- Step 2: Index viewer -->
+  <div class="section hidden" id="index-section">
+    <div class="section-title"><span class="icon">📊</span> 2. Visualizar índices</div>
+    <div class="index-grid" id="index-grid"></div>
+    <div style="margin-top:8px; display:flex; gap:6px;">
+      <div style="flex:1">
+        <label>Índice activo</label>
+        <select id="active-index" onchange="showIndex(this.value)"></select>
+      </div>
+    </div>
+    <div style="margin-top:8px; display:flex; gap:6px;">
+      <button class="btn-sm btn-primary" style="flex:1" onclick="downloadIndex()">⬇ Descargar GeoTIFF</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Weed detection -->
+  <div class="section hidden" id="detection-section">
+    <div class="section-title"><span class="icon">🌿</span> 3. Detección de malezas</div>
+
+    <label>Índice para máscara de vegetación</label>
+    <select id="veg-index">
+      <option value="NDVI">NDVI</option>
+      <option value="NDRE">NDRE</option>
+    </select>
+
+    <label>Umbral mínimo de vegetación</label>
+    <div class="range-row">
+      <input type="range" id="veg-thresh" min="0" max="0.5" step="0.01" value="0.1" oninput="document.getElementById('veg-thresh-val').textContent=this.value">
+      <span class="range-val" id="veg-thresh-val">0.10</span>
+    </div>
+
+    <label>Índice para detección de malezas</label>
+    <select id="weed-index">
+      <option value="NDVI">NDVI</option>
+      <option value="NDRE">NDRE</option>
+      <option value="GNDVI">GNDVI</option>
+    </select>
+
+    <label>Método de detección</label>
+    <select id="weed-method" onchange="toggleMethod()">
+      <option value="statistical">Estadístico (desvío estándar)</option>
+      <option value="threshold">Umbral fijo</option>
+    </select>
+
+    <div id="panel-statistical">
+      <label>Factor de desvío estándar (cuánto por debajo de la media = maleza)</label>
+      <div class="range-row">
+        <input type="range" id="weed-std" min="0.5" max="3" step="0.1" value="1.5" oninput="document.getElementById('weed-std-val').textContent=this.value">
+        <span class="range-val" id="weed-std-val">1.5</span>
+      </div>
+    </div>
+    <div id="panel-threshold" class="hidden">
+      <label>Umbral fijo (NDVI/NDRE < este valor = maleza)</label>
+      <div class="range-row">
+        <input type="range" id="weed-thresh" min="0" max="0.8" step="0.01" value="0.3" oninput="document.getElementById('weed-thresh-val').textContent=this.value">
+        <span class="range-val" id="weed-thresh-val">0.30</span>
+      </div>
+    </div>
+
+    <label>Área mínima de manchón (m²)</label>
+    <div class="range-row">
+      <input type="range" id="min-area" min="10" max="500" step="10" value="50" oninput="document.getElementById('min-area-val').textContent=this.value">
+      <span class="range-val" id="min-area-val">50</span>
+    </div>
+
+    <label>Buffer alrededor de manchones (m)</label>
+    <div class="range-row">
+      <input type="range" id="buffer-m" min="0" max="10" step="0.5" value="2" oninput="document.getElementById('buffer-m-val').textContent=this.value">
+      <span class="range-val" id="buffer-m-val">2.0</span>
+    </div>
+
+    <button class="btn btn-success" id="btn-detect" onclick="runDetection()">🔍 Detectar malezas</button>
+    <div id="detection-error" class="error-msg hidden"></div>
+  </div>
+
+  <!-- Step 4: Results & Download -->
+  <div class="section hidden" id="results-section">
+    <div class="section-title"><span class="icon">✅</span> 4. Resultados</div>
+    <div id="result-stats"></div>
+  </div>
+
+  <div class="section hidden" id="download-section">
+    <div class="section-title"><span class="icon">⬇</span> 5. Descargar prescripción</div>
+
+    <label>Nombre del lote</label>
+    <input type="text" id="lote-name" value="Lote_1" placeholder="Ej: Lote_Norte">
+    <label>Producto (para ISO-XML)</label>
+    <input type="text" id="product-name" value="Herbicida" placeholder="Ej: Glifosato">
+
+    <div class="dl-grid">
+      <div class="dl-btn" onclick="download('shapefile')">
+        <span class="dl-icon">📦</span>
+        <span class="dl-label">Shapefile</span>
+        <span class="dl-desc">Universal · todos los monitores</span>
+      </div>
+      <div class="dl-btn" onclick="download('isoxml')">
+        <span class="dl-icon">🌐</span>
+        <span class="dl-label">ISO-XML</span>
+        <span class="dl-desc">ISOBUS · estándar internacional</span>
+      </div>
+      <div class="dl-btn" onclick="download('johndeere')">
+        <span class="dl-icon">🟢</span>
+        <span class="dl-label">John Deere</span>
+        <span class="dl-desc">Operations Center · RX format</span>
+      </div>
+      <div class="dl-btn" onclick="download('kmz')">
+        <span class="dl-icon">🗺️</span>
+        <span class="dl-label">KMZ</span>
+        <span class="dl-desc">Google Earth · Trimble</span>
+      </div>
+      <div class="dl-btn" onclick="download('geojson')">
+        <span class="dl-icon">📋</span>
+        <span class="dl-label">GeoJSON</span>
+        <span class="dl-desc">GIS · QGIS · Arc</span>
+      </div>
+      <div class="dl-btn" onclick="downloadWeedZones()">
+        <span class="dl-icon">🌾</span>
+        <span class="dl-label">Manchones</span>
+        <span class="dl-desc">Solo zonas de maleza (.shp)</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /sidebar -->
+
+<div style="position:relative; flex:1;">
+  <div id="map"></div>
+  <div class="legend" id="legend" style="display:none;">
+    <div style="font-size:0.72rem; font-weight:700; margin-bottom:6px; color:#aaa;">LEYENDA</div>
+    <div class="legend-item"><div class="legend-color" style="background:#e05050;"></div>Maleza / Aplicar</div>
+    <div class="legend-item"><div class="legend-color" style="background:#50c878;opacity:0.5;"></div>Sin aplicar</div>
+  </div>
+</div>
+</div><!-- /main -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ─── State ─────────────────────────────────────────────────────────────────
+let currentTab = 'geotiff';
+let geotiffFiles = [];
+let photoFiles = [];
+let currentJobId = null;
+let pollInterval = null;
+let currentIndex = null;
+let overlayLayer = null;
+let weedLayer = null;
+
+// ─── Map ───────────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [-34, -63], zoom: 6 });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors', maxZoom: 22
+}).addTo(map);
+
+// ─── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-geotiff').className = 'tab' + (tab==='geotiff'?' active':'');
+  document.getElementById('tab-photos').className = 'tab' + (tab==='photos'?' active':'');
+  document.getElementById('panel-geotiff').classList.toggle('hidden', tab!=='geotiff');
+  document.getElementById('panel-photos').classList.toggle('hidden', tab!=='photos');
+}
+
+function toggleMethod() {
+  const m = document.getElementById('weed-method').value;
+  document.getElementById('panel-statistical').classList.toggle('hidden', m!=='statistical');
+  document.getElementById('panel-threshold').classList.toggle('hidden', m!=='threshold');
+}
+
+// ─── File selection ────────────────────────────────────────────────────────
+function onGeotiffSelect(input) {
+  geotiffFiles = Array.from(input.files);
+  document.getElementById('geotiff-count').textContent = `${geotiffFiles.length} archivo(s) seleccionado(s)`;
+  document.getElementById('btn-upload-tif').disabled = geotiffFiles.length === 0;
+}
+function onPhotosSelect(input) {
+  photoFiles = Array.from(input.files);
+  document.getElementById('photos-count').textContent = `${photoFiles.length} foto(s) seleccionada(s)`;
+  document.getElementById('btn-upload-photos').disabled = photoFiles.length === 0;
+}
+
+// Drag and drop
+['dz-geotiff','dz-photos'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('drag-over');
+    const input = id === 'dz-geotiff' ? document.getElementById('file-geotiff') : document.getElementById('file-photos');
+    const dt = new DataTransfer();
+    Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    if (id === 'dz-geotiff') onGeotiffSelect(input); else onPhotosSelect(input);
+  });
+});
+
+// ─── Upload ────────────────────────────────────────────────────────────────
+async function uploadGeotiff() {
+  const fd = new FormData();
+  geotiffFiles.forEach(f => fd.append('files', f));
+  await startUpload('/api/upload/geotiff', fd);
+}
+
+async function uploadPhotos() {
+  const fd = new FormData();
+  photoFiles.forEach(f => fd.append('files', f));
+  fd.append('odm_url', document.getElementById('odm-url').value);
+  fd.append('odm_token', document.getElementById('odm-token').value);
+  await startUpload('/api/upload/photos', fd);
+}
+
+async function startUpload(url, fd) {
+  showSection('progress-section');
+  setStatus('processing', 'Subiendo archivos...');
+  setProgress(2, 'Subiendo...');
+
+  try {
+    const resp = await fetch(url, { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error al subir');
+    currentJobId = data.job_id;
+    document.getElementById('job-id-label').textContent = `Job: ${currentJobId}`;
+    startPolling();
+  } catch(e) {
+    setStatus('error', e.message);
+  }
+}
+
+// ─── Polling ───────────────────────────────────────────────────────────────
+function startPolling() {
+  clearInterval(pollInterval);
+  pollInterval = setInterval(pollJob, 2000);
+}
+
+async function pollJob() {
+  if (!currentJobId) return;
+  try {
+    const resp = await fetch(`/api/job/${currentJobId}/status`);
+    const job = await resp.json();
+
+    setProgress(job.progress, statusLabel(job.status, job.odm_status));
+
+    if (job.status === 'error') {
+      clearInterval(pollInterval);
+      setStatus('error', job.error || 'Error desconocido');
+      return;
+    }
+
+    if (job.status === 'ready_for_detection' || job.status === 'detection_done') {
+      clearInterval(pollInterval);
+      setStatus('ready', 'Listo ✓');
+      setProgress(100, 'Procesamiento completo');
+      onProcessingDone(job);
+    }
+  } catch(e) { /* network blip, ignore */ }
+}
+
+function statusLabel(status, odmStatus) {
+  const labels = {
+    queued: 'En cola...',
+    uploading_to_odm: 'Subiendo a ODM...',
+    processing_odm: odmStatus ? `ODM: ${odmStatus}` : 'Generando ortomosaico...',
+    downloading_orthomosaic: 'Descargando ortomosaico...',
+    processing: 'Procesando...',
+    calculating_indices: 'Calculando índices espectrales...',
+    ready_for_detection: 'Listo para detección',
+    detection_done: 'Detección completada',
+    error: 'Error'
+  };
+  return labels[status] || status;
+}
+
+// ─── On done ───────────────────────────────────────────────────────────────
+function onProcessingDone(job) {
+  // Populate index selector
+  const indices = job.indices_available || [];
+  const grid = document.getElementById('index-grid');
+  const select = document.getElementById('active-index');
+  const vegSel = document.getElementById('veg-index');
+  const weedSel = document.getElementById('weed-index');
+  grid.innerHTML = '';
+  select.innerHTML = '';
+  vegSel.innerHTML = '';
+  weedSel.innerHTML = '';
+
+  indices.forEach(idx => {
+    const btn = document.createElement('div');
+    btn.className = 'index-btn';
+    btn.textContent = idx;
+    btn.onclick = () => { document.querySelectorAll('.index-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); showIndex(idx); };
+    grid.appendChild(btn);
+
+    [select, vegSel, weedSel].forEach(sel => {
+      const opt = document.createElement('option');
+      opt.value = idx; opt.textContent = idx;
+      sel.appendChild(opt);
+    });
+  });
+
+  if (indices.length > 0) showIndex(indices[0]);
+
+  // Fit map to bounds
+  if (job.bounds) {
+    const [w,s,e,n] = job.bounds;
+    map.fitBounds([[s,w],[n,e]]);
+  }
+
+  showSection('index-section');
+  showSection('detection-section');
+}
+
+// ─── Index display ─────────────────────────────────────────────────────────
+async function showIndex(name) {
+  currentIndex = name;
+  document.getElementById('active-index').value = name;
+  document.querySelectorAll('.index-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === name);
+  });
+
+  const resp = await fetch(`/api/job/${currentJobId}/preview/${name}`);
+  const data = await resp.json();
+
+  if (overlayLayer) map.removeLayer(overlayLayer);
+  const [w,s,e,n] = data.bounds;
+  overlayLayer = L.imageOverlay(`data:image/png;base64,${data.image}`, [[s,w],[n,e]], { opacity: 0.85 }).addTo(map);
+}
+
+function downloadIndex() {
+  if (!currentJobId || !currentIndex) return;
+  const lote = document.getElementById('lote-name').value || 'lote';
+  window.location.href = `/api/job/${currentJobId}/download/index_tif?index=${currentIndex}&lote=${lote}`;
+}
+
+// ─── Detection ─────────────────────────────────────────────────────────────
+async function runDetection() {
+  document.getElementById('btn-detect').disabled = true;
+  document.getElementById('btn-detect').textContent = '⏳ Procesando...';
+  document.getElementById('detection-error').classList.add('hidden');
+
+  const method = document.getElementById('weed-method').value;
+  const params = {
+    vegetation_index: document.getElementById('veg-index').value,
+    veg_threshold: parseFloat(document.getElementById('veg-thresh').value),
+    weed_index: document.getElementById('weed-index').value,
+    weed_method: method,
+    weed_threshold: parseFloat(document.getElementById('weed-thresh').value),
+    weed_std_factor: parseFloat(document.getElementById('weed-std').value),
+    min_area_m2: parseFloat(document.getElementById('min-area').value),
+    buffer_m: parseFloat(document.getElementById('buffer-m').value),
+  };
+
+  try {
+    const resp = await fetch(`/api/job/${currentJobId}/detect`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(params)
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Error en detección');
+    showDetectionResults(data);
+  } catch(e) {
+    const errEl = document.getElementById('detection-error');
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    document.getElementById('btn-detect').disabled = false;
+    document.getElementById('btn-detect').textContent = '🔍 Detectar malezas';
+  }
+}
+
+function showDetectionResults(data) {
+  // Draw weed zones on map
+  if (weedLayer) map.removeLayer(weedLayer);
+  if (data.weed_count > 0) {
+    const geojson = JSON.parse(data.geojson);
+    weedLayer = L.geoJSON(geojson, {
+      style: { color: '#e05050', fillColor: '#e05050', fillOpacity: 0.5, weight: 2 }
+    }).addTo(map);
+    document.getElementById('legend').style.display = 'block';
+  }
+
+  // Stats
+  showSection('results-section');
+  document.getElementById('result-stats').innerHTML = `
+    <div class="result-stat">
+      <span class="result-label">Manchones detectados</span>
+      <span class="result-val ${data.weed_count>0?'warn':'ok'}">${data.weed_count}</span>
+    </div>
+    <div class="result-stat">
+      <span class="result-label">Área total con maleza</span>
+      <span class="result-val warn">${data.total_area_ha.toFixed(3)} ha</span>
+    </div>
+    <div class="result-stat">
+      <span class="result-label">Estado</span>
+      <span class="result-val ok">Prescripción lista</span>
+    </div>
+  `;
+
+  showSection('download-section');
+}
+
+// ─── Download ──────────────────────────────────────────────────────────────
+function download(fmt) {
+  const lote = encodeURIComponent(document.getElementById('lote-name').value || 'prescripcion');
+  const product = encodeURIComponent(document.getElementById('product-name').value || 'Herbicida');
+  window.location.href = `/api/job/${currentJobId}/download/${fmt}?lote=${lote}&product=${product}`;
+}
+function downloadWeedZones() {
+  window.location.href = `/api/job/${currentJobId}/download/weed_zones`;
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+function showSection(id) { document.getElementById(id).classList.remove('hidden'); }
+function setProgress(pct, text) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = text;
+}
+function setStatus(type, text) {
+  const el = document.getElementById('status-badge');
+  el.className = 'status-badge status-' + type;
+  el.textContent = text;
+}
+</script>
+</body>
+</html>
