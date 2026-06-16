@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Posición - Girasol</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #2d3748;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      color: #718096;
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2.5px dashed #a0aec0;
+      border-radius: 14px;
+      background: #fff;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      margin-bottom: 20px;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #4299e1;
+      background: #ebf8ff;
+    }
+    .drop-zone svg {
+      width: 48px;
+      height: 48px;
+      color: #a0aec0;
+      margin-bottom: 12px;
+    }
+    .drop-zone p.main {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #4a5568;
+    }
+    .drop-zone p.sub {
+      font-size: 0.85rem;
+      color: #a0aec0;
+      margin-top: 6px;
+    }
+    .drop-zone input[type="file"] { display: none; }
+
+    /* File list */
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      font-size: 0.9rem;
+    }
+    .file-item svg { flex-shrink: 0; color: #48bb78; width: 18px; height: 18px; }
+    .file-item span { flex: 1; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-item button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #fc8181;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .file-item button:hover { background: #fff5f5; }
+
+    /* Action buttons */
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 22px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: #4299e1; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #3182ce; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover:not(:disabled) { background: #cbd5e0; }
+    .btn-success { background: #48bb78; color: #fff; }
+    .btn-success:hover:not(:disabled) { background: #38a169; }
+
+    /* Spinner */
+    .spinner-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .spinner-overlay.visible { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid #e2e8f0;
+      border-top-color: #4299e1;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-overlay p { font-size: 1rem; color: #4a5568; font-weight: 500; }
+
+    /* Error banner */
+    .error-banner {
+      display: none;
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #c53030;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    .error-banner.visible { display: block; }
+
+    /* Summary cards */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 22px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .card .label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 6px; }
+    .card .value { font-size: 1.7rem; font-weight: 700; color: #2d3748; }
+    .card.card-pos .value { color: #276749; }
+    .card.card-neg .value { color: #c53030; }
+
+    /* Results table */
+    .results-section { display: none; }
+    .results-section.visible { display: block; }
+
+    .table-wrap {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead tr {
+      background: #2d3748;
+      color: #fff;
+    }
+    th {
+      padding: 13px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    th:not(:first-child) { text-align: right; }
+    td {
+      padding: 11px 16px;
+      border-bottom: 1px solid #edf2f7;
+    }
+    td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { filter: brightness(0.97); }
+
+    tr.row-pos { background: #f0fff4; }
+    tr.row-neg { background: #fff5f5; }
+    tr.row-zero { background: #fffff0; }
+
+    .pos-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .pos-badge.pos { background: #c6f6d5; color: #276749; }
+    .pos-badge.neg { background: #fed7d7; color: #c53030; }
+    .pos-badge.zero { background: #fefcbf; color: #744210; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .results-header h2 { font-size: 1.15rem; font-weight: 700; color: #2d3748; }
+  </style>
+</head>
+<body>
+
+<div class="spinner-overlay" id="spinnerOverlay">
+  <div class="spinner"></div>
+  <p>Procesando archivos...</p>
+</div>
+
+<div class="container">
+  <header>
+    <h1>Calculadora de Posición — Girasol</h1>
+    <p>Cargue uno o más archivos Excel (.xlsx) para calcular la posición de híbridos</p>
+  </header>
+
+  <!-- Drop zone -->
+  <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Zona de carga de archivos">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+    </svg>
+    <p class="main">Arrastrá los archivos aquí o hacé clic para seleccionar</p>
+    <p class="sub">Archivos .xlsx — podés cargar varios a la vez</p>
+    <input type="file" id="fileInput" accept=".xlsx" multiple>
+  </div>
+
+  <!-- File list -->
+  <div class="file-list" id="fileList"></div>
+
+  <!-- Action buttons -->
+  <div class="actions">
+    <button class="btn btn-primary" id="btnCalcular" disabled>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 5h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2z"/>
+      </svg>
+      Calcular posición
+    </button>
+    <button class="btn btn-success" id="btnExportar" disabled>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      </svg>
+      Exportar CSV
+    </button>
+    <button class="btn btn-secondary" id="btnLimpiar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+      Limpiar todo
+    </button>
+  </div>
+
+  <!-- Error banner -->
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- Results -->
+  <div class="results-section" id="resultsSection">
+    <div class="summary" id="summaryCards"></div>
+    <div class="results-header">
+      <h2>Tabla de Posición</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Artículo</th>
+            <th>Pendiente de remitir</th>
+            <th>Pedidos a NK</th>
+            <th>Posición</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  files: [],      // { name, arrayBuffer }
+  results: null,  // array of { articulo, pendiente, pedidos, posicion }
+};
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const dropZone      = document.getElementById('dropZone');
+const fileInput     = document.getElementById('fileInput');
+const fileList      = document.getElementById('fileList');
+const btnCalcular   = document.getElementById('btnCalcular');
+const btnExportar   = document.getElementById('btnExportar');
+const btnLimpiar    = document.getElementById('btnLimpiar');
+const errorBanner   = document.getElementById('errorBanner');
+const spinnerOverlay= document.getElementById('spinnerOverlay');
+const resultsSection= document.getElementById('resultsSection');
+const summaryCards  = document.getElementById('summaryCards');
+const tableBody     = document.getElementById('tableBody');
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function showError(msg) {
+  errorBanner.textContent = msg;
+  errorBanner.classList.add('visible');
+}
+function clearError() {
+  errorBanner.classList.remove('visible');
+}
+function showSpinner() { spinnerOverlay.classList.add('visible'); }
+function hideSpinner() { spinnerOverlay.classList.remove('visible'); }
+
+function fmt(n) {
+  return n.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+}
+
+function isFormula(v) {
+  return typeof v === 'string' && v.trim().startsWith('=');
+}
+
+function cellStr(cell) {
+  if (!cell) return null;
+  const v = cell.v;
+  if (v === null || v === undefined || v === '') return null;
+  if (isFormula(String(v))) return null;
+  return String(v).trim();
+}
+
+function cellNum(cell) {
+  if (!cell) return 0;
+  const v = cell.v;
+  if (v === null || v === undefined) return 0;
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+}
+
+function findSheet(wb, rawName) {
+  const target = rawName.trim().toLowerCase();
+  const found = wb.SheetNames.find(n => n.trim().toLowerCase() === target);
+  return found ? wb.Sheets[found] : null;
+}
+
+// ── File management ────────────────────────────────────────────────────────
+function addFiles(fileObjs) {
+  Array.from(fileObjs).forEach(f => {
+    if (!f.name.endsWith('.xlsx')) {
+      showError(`El archivo "${f.name}" no es .xlsx y fue ignorado.`);
+      return;
+    }
+    if (state.files.find(x => x.name === f.name)) return; // dedupe by name
+    const reader = new FileReader();
+    reader.onload = e => {
+      state.files.push({ name: f.name, arrayBuffer: e.target.result });
+      renderFileList();
+      updateButtons();
+    };
+    reader.readAsArrayBuffer(f);
+  });
+}
+
+function removeFile(name) {
+  state.files = state.files.filter(f => f.name !== name);
+  renderFileList();
+  updateButtons();
+  if (state.files.length === 0) resetResults();
+}
+
+function renderFileList() {
+  fileList.innerHTML = '';
+  state.files.forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span title="${f.name}">${f.name}</span>
+      <button title="Quitar archivo" aria-label="Quitar ${f.name}">✕</button>
+    `;
+    item.querySelector('button').addEventListener('click', () => removeFile(f.name));
+    fileList.appendChild(item);
+  });
+}
+
+function updateButtons() {
+  btnCalcular.disabled = state.files.length === 0;
+}
+
+function resetResults() {
+  state.results = null;
+  resultsSection.classList.remove('visible');
+  btnExportar.disabled = true;
+  summaryCards.innerHTML = '';
+  tableBody.innerHTML = '';
+}
+
+// ── Core processing ────────────────────────────────────────────────────────
+function processWorkbook(wb) {
+  // Sheet 3: mapping
+  const sheetMap = findSheet(wb, 'pedidos -pend remitir');
+  if (!sheetMap) throw new Error(`Hoja "pedidos -pend remitir" no encontrada.`);
+
+  // Sheet 1: pendiente de remitir
+  const sheetPend = findSheet(wb, 'Pendiente de remitir');
+  if (!sheetPend) throw new Error(`Hoja "Pendiente de remitir" no encontrada.`);
+
+  // Sheet 2: pedidos a nk
+  const sheetPedidos = findSheet(wb, 'pedidos a nk');
+  if (!sheetPedidos) throw new Error(`Hoja "pedidos a nk" no encontrada.`);
+
+  // Parse mapping (sheet 3)
+  // col 0 = articulo_pte_remitir, col 1 = articulo_nk
+  const mapRange = XLSX.utils.decode_range(sheetMap['!ref'] || 'A1');
+  const mapping = new Map(); // articulo_pte_remitir -> articulo_nk
+  for (let r = 1; r <= mapRange.e.r; r++) {
+    const c0 = sheetMap[XLSX.utils.encode_cell({ r, c: 0 })];
+    const c1 = sheetMap[XLSX.utils.encode_cell({ r, c: 1 })];
+    const art = cellStr(c0);
+    const nk  = cellStr(c1);
+    if (art && nk) mapping.set(art, nk);
+  }
+
+  // Parse pendiente (sheet 1): col 11 = DescArticulo, col 12 = Cantidad
+  // accumulate per articulo
+  const pendMap = new Map(); // articulo -> total qty
+  const pendRange = XLSX.utils.decode_range(sheetPend['!ref'] || 'A1');
+  for (let r = 1; r <= pendRange.e.r; r++) {
+    const cDesc = sheetPend[XLSX.utils.encode_cell({ r, c: 11 })];
+    const cQty  = sheetPend[XLSX.utils.encode_cell({ r, c: 12 })];
+    const desc  = cellStr(cDesc);
+    if (!desc) continue;
+    const qty = cellNum(cQty);
+    pendMap.set(desc, (pendMap.get(desc) || 0) + qty);
+  }
+
+  // Parse pedidos a NK (sheet 2): col 1 = Material desc., col 2 = Sum of Order quantity
+  const pedidosMap = new Map(); // material_desc -> total qty
+  const pedRange = XLSX.utils.decode_range(sheetPedidos['!ref'] || 'A1');
+  for (let r = 1; r <= pedRange.e.r; r++) {
+    const cMat = sheetPedidos[XLSX.utils.encode_cell({ r, c: 1 })];
+    const cQty = sheetPedidos[XLSX.utils.encode_cell({ r, c: 2 })];
+    const mat  = cellStr(cMat);
+    if (!mat) continue;
+    const qty = cellNum(cQty);
+    pedidosMap.set(mat, (pedidosMap.get(mat) || 0) + qty);
+  }
+
+  return { mapping, pendMap, pedidosMap };
+}
+
+async function calcular() {
+  clearError();
+  showSpinner();
+  resetResults();
+
+  // Use setTimeout so the spinner actually renders before heavy work
+  await new Promise(r => setTimeout(r, 30));
+
+  try {
+    // Accumulate across files
+    const globalPendMap    = new Map();
+    const globalPedidosMap = new Map();
+    let   globalMapping    = new Map();
+
+    for (const f of state.files) {
+      const wb = XLSX.read(new Uint8Array(f.arrayBuffer), {
+        type: 'array',
+        cellFormula: false,
+      });
+
+      let parsed;
+      try {
+        parsed = processWorkbook(wb);
+      } catch (e) {
+        throw new Error(`Error en "${f.name}": ${e.message}`);
+      }
+
+      // Merge mapping (last file wins for same key — consistent across files typically)
+      parsed.mapping.forEach((v, k) => globalMapping.set(k, v));
+
+      // Sum pendiente
+      parsed.pendMap.forEach((qty, art) => {
+        globalPendMap.set(art, (globalPendMap.get(art) || 0) + qty);
+      });
+
+      // Sum pedidos
+      parsed.pedidosMap.forEach((qty, mat) => {
+        globalPedidosMap.set(mat, (globalPedidosMap.get(mat) || 0) + qty);
+      });
+    }
+
+    if (globalMapping.size === 0) {
+      throw new Error('No se encontraron filas válidas en la hoja de mapeo "pedidos -pend remitir".');
+    }
+
+    // Build results
+    const rows = [];
+    globalMapping.forEach((artNK, artPend) => {
+      const pendiente = globalPendMap.get(artPend) || 0;
+      const pedidos   = globalPedidosMap.get(artNK) || 0;
+      const posicion  = pedidos - pendiente;
+      rows.push({ articulo: artPend, pendiente, pedidos, posicion });
+    });
+
+    // Sort by articulo name
+    rows.sort((a, b) => a.articulo.localeCompare(b.articulo, 'es'));
+
+    state.results = rows;
+    renderResults(rows);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    hideSpinner();
+  }
+}
+
+// ── Render results ─────────────────────────────────────────────────────────
+function renderResults(rows) {
+  const totalPend    = rows.reduce((s, r) => s + r.pendiente, 0);
+  const totalPedidos = rows.reduce((s, r) => s + r.pedidos,   0);
+  const totalPos     = totalPedidos - totalPend;
+
+  // Summary cards
+  summaryCards.innerHTML = `
+    <div class="card">
+      <div class="label">Total Pendiente de remitir</div>
+      <div class="value">${fmt(totalPend)}</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Pedidos a NK</div>
+      <div class="value">${fmt(totalPedidos)}</div>
+    </div>
+    <div class="card ${totalPos > 0 ? 'card-pos' : totalPos < 0 ? 'card-neg' : ''}">
+      <div class="label">Posición Total</div>
+      <div class="value">${fmt(totalPos)}</div>
+    </div>
+  `;
+
+  // Table rows
+  tableBody.innerHTML = '';
+  rows.forEach(row => {
+    const cls = row.posicion > 0 ? 'row-pos' : row.posicion < 0 ? 'row-neg' : 'row-zero';
+    const badgeCls = row.posicion > 0 ? 'pos' : row.posicion < 0 ? 'neg' : 'zero';
+    const tr = document.createElement('tr');
+    tr.className = cls;
+    tr.innerHTML = `
+      <td>${escHtml(row.articulo)}</td>
+      <td>${fmt(row.pendiente)}</td>
+      <td>${fmt(row.pedidos)}</td>
+      <td><span class="pos-badge ${badgeCls}">${fmt(row.posicion)}</span></td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  resultsSection.classList.add('visible');
+  btnExportar.disabled = false;
+
+  // Scroll to results
+  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Export CSV ─────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!state.results) return;
+  const rows = state.results;
+  const BOM  = '﻿'; // UTF-8 BOM so Excel opens correctly
+  const lines = [
+    ['Artículo','Pendiente de remitir','Pedidos a NK','Posición'].join(';'),
+    ...rows.map(r => [r.articulo, r.pendiente, r.pedidos, r.posicion].join(';')),
+  ];
+  const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `posicion_girasol_${isoDate()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function isoDate() {
+  const d = new Date();
+  return d.toISOString().slice(0,10).replace(/-/g,'');
+}
+
+// ── Event listeners ────────────────────────────────────────────────────────
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+fileInput.addEventListener('change', e => {
+  addFiles(e.target.files);
+  e.target.value = ''; // reset so same file can be re-added after removal
+});
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  addFiles(e.dataTransfer.files);
+});
+
+btnCalcular.addEventListener('click', calcular);
+btnExportar.addEventListener('click', exportCSV);
+btnLimpiar.addEventListener('click', () => {
+  state.files = [];
+  renderFileList();
+  updateButtons();
+  resetResults();
+  clearError();
+});
+</script>
+</body>
+</html>
