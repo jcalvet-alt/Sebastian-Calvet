@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora de Posición - Girasol</title>
+  <title>Posición Girasol — NK</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -16,98 +16,90 @@
       padding: 24px 16px 48px;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 32px;
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 32px; }
+    header h1 { font-size: 1.75rem; font-weight: 700; color: #2d3748; }
+    header p { color: #718096; margin-top: 6px; font-size: 0.95rem; }
+
+    /* Upload grid */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
     }
-    header h1 {
-      font-size: 1.8rem;
+    @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
+
+    .upload-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 20px;
+    }
+    .upload-card h3 {
+      font-size: 0.9rem;
       font-weight: 700;
-      color: #2d3748;
-      letter-spacing: -0.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #4a5568;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    header p {
-      color: #718096;
-      margin-top: 6px;
-      font-size: 0.95rem;
+    .upload-card h3 .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
+    .dot-pend { background: #ed8936; }
+    .dot-ped  { background: #4299e1; }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-
-    /* Drop zone */
     .drop-zone {
       border: 2.5px dashed #a0aec0;
-      border-radius: 14px;
-      background: #fff;
-      padding: 48px 24px;
+      border-radius: 10px;
+      padding: 28px 16px;
       text-align: center;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      margin-bottom: 20px;
     }
     .drop-zone:hover, .drop-zone.drag-over {
       border-color: #4299e1;
       background: #ebf8ff;
     }
-    .drop-zone svg {
-      width: 48px;
-      height: 48px;
-      color: #a0aec0;
-      margin-bottom: 12px;
+    .drop-zone.loaded {
+      border-color: #48bb78;
+      background: #f0fff4;
     }
-    .drop-zone p.main {
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: #4a5568;
-    }
-    .drop-zone p.sub {
-      font-size: 0.85rem;
-      color: #a0aec0;
-      margin-top: 6px;
+    .drop-zone svg { width: 36px; height: 36px; color: #a0aec0; margin-bottom: 8px; }
+    .drop-zone.loaded svg { color: #48bb78; }
+    .drop-zone p.main { font-size: 0.92rem; font-weight: 600; color: #4a5568; }
+    .drop-zone p.sub  { font-size: 0.8rem; color: #a0aec0; margin-top: 4px; }
+    .drop-zone p.filename {
+      font-size: 0.85rem; font-weight: 600;
+      color: #276749; margin-top: 6px;
+      word-break: break-all;
     }
     .drop-zone input[type="file"] { display: none; }
 
-    /* File list */
-    .file-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .file-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: #fff;
-      border-radius: 8px;
-      padding: 10px 14px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-      font-size: 0.9rem;
-    }
-    .file-item svg { flex-shrink: 0; color: #48bb78; width: 18px; height: 18px; }
-    .file-item span { flex: 1; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-item button {
+    .btn-clear-file {
+      margin-top: 10px;
       background: none;
-      border: none;
+      border: 1px solid #fc8181;
+      color: #c53030;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
       cursor: pointer;
-      color: #fc8181;
-      font-size: 1.1rem;
-      line-height: 1;
-      padding: 2px 4px;
-      border-radius: 4px;
-      transition: background 0.15s;
     }
-    .file-item button:hover { background: #fff5f5; }
+    .btn-clear-file:hover { background: #fff5f5; }
 
-    /* Action buttons */
+    /* Actions */
     .actions {
       display: flex;
       gap: 12px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
       flex-wrap: wrap;
     }
     .btn {
@@ -123,128 +115,133 @@
       gap: 7px;
     }
     .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-    .btn-primary { background: #4299e1; color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: #3182ce; }
-    .btn-secondary { background: #e2e8f0; color: #4a5568; }
-    .btn-secondary:hover:not(:disabled) { background: #cbd5e0; }
-    .btn-success { background: #48bb78; color: #fff; }
-    .btn-success:hover:not(:disabled) { background: #38a169; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary  { background: #4299e1; color: #fff; }
+    .btn-primary:hover:not(:disabled)  { background: #3182ce; }
+    .btn-success  { background: #48bb78; color: #fff; }
+    .btn-success:hover:not(:disabled)  { background: #38a169; }
+    .btn-secondary{ background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover:not(:disabled){ background: #cbd5e0; }
 
     /* Spinner */
     .spinner-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(255,255,255,0.75);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 16px;
+      display: none; position: fixed; inset: 0;
+      background: rgba(255,255,255,0.8);
+      z-index: 100; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px;
     }
     .spinner-overlay.visible { display: flex; }
     .spinner {
-      width: 48px; height: 48px;
-      border: 5px solid #e2e8f0;
+      width: 44px; height: 44px;
+      border: 4px solid #e2e8f0;
       border-top-color: #4299e1;
       border-radius: 50%;
       animation: spin 0.75s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner-overlay p { font-size: 1rem; color: #4a5568; font-weight: 500; }
+    .spinner-overlay p { font-size: 0.95rem; color: #4a5568; font-weight: 500; }
 
-    /* Error banner */
-    .error-banner {
+    /* Banners */
+    .banner {
       display: none;
-      background: #fff5f5;
-      border: 1px solid #fc8181;
       border-radius: 8px;
       padding: 12px 16px;
-      color: #c53030;
       font-size: 0.9rem;
       margin-bottom: 20px;
     }
-    .error-banner.visible { display: block; }
+    .banner.visible { display: block; }
+    .banner-error { background: #fff5f5; border: 1px solid #fc8181; color: #c53030; }
+    .banner-warn  { background: #fffbeb; border: 1px solid #f6e05e; color: #744210; }
 
     /* Summary cards */
     .summary {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
     }
     .card {
       background: #fff;
       border-radius: 12px;
-      padding: 20px 22px;
+      padding: 18px 20px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
-    .card .label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 6px; }
-    .card .value { font-size: 1.7rem; font-weight: 700; color: #2d3748; }
+    .card .label {
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: #a0aec0; margin-bottom: 6px;
+    }
+    .card .value { font-size: 1.6rem; font-weight: 700; color: #2d3748; }
     .card.card-pos .value { color: #276749; }
     .card.card-neg .value { color: #c53030; }
 
-    /* Results table */
+    /* Results */
     .results-section { display: none; }
     .results-section.visible { display: block; }
+
+    .results-header {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
+    }
+    .results-header h2 { font-size: 1.1rem; font-weight: 700; color: #2d3748; }
 
     .table-wrap {
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-      overflow: hidden;
+      overflow: auto;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
-    thead tr {
-      background: #2d3748;
-      color: #fff;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    thead tr { background: #2d3748; color: #fff; }
     th {
-      padding: 13px 16px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      padding: 12px 16px; text-align: left;
+      font-weight: 600; font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      white-space: nowrap;
     }
     th:not(:first-child) { text-align: right; }
-    td {
-      padding: 11px 16px;
-      border-bottom: 1px solid #edf2f7;
-    }
+    td { padding: 10px 16px; border-bottom: 1px solid #edf2f7; }
     td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover { filter: brightness(0.97); }
 
-    tr.row-pos { background: #f0fff4; }
-    tr.row-neg { background: #fff5f5; }
+    tr.row-pos  { background: #f0fff4; }
+    tr.row-neg  { background: #fff5f5; }
     tr.row-zero { background: #fffff0; }
 
-    .pos-badge {
+    .badge {
       display: inline-block;
-      padding: 2px 8px;
-      border-radius: 99px;
-      font-weight: 700;
-      font-size: 0.85rem;
+      padding: 2px 9px; border-radius: 99px;
+      font-weight: 700; font-size: 0.85rem;
     }
-    .pos-badge.pos { background: #c6f6d5; color: #276749; }
-    .pos-badge.neg { background: #fed7d7; color: #c53030; }
-    .pos-badge.zero { background: #fefcbf; color: #744210; }
+    .badge.pos  { background: #c6f6d5; color: #276749; }
+    .badge.neg  { background: #fed7d7; color: #c53030; }
+    .badge.zero { background: #fefcbf; color: #744210; }
 
-    .results-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-      gap: 10px;
+    .unmatched-section {
+      margin-top: 20px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
     }
-    .results-header h2 { font-size: 1.15rem; font-weight: 700; color: #2d3748; }
+    .unmatched-section summary {
+      padding: 14px 18px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #744210;
+      cursor: pointer;
+      background: #fffbeb;
+      border-radius: 12px;
+    }
+    .unmatched-section[open] summary { border-radius: 12px 12px 0 0; }
+    .unmatched-list {
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      color: #4a5568;
+      line-height: 1.8;
+    }
   </style>
 </head>
 <body>
@@ -256,60 +253,77 @@
 
 <div class="container">
   <header>
-    <h1>Calculadora de Posición — Girasol</h1>
-    <p>Cargue uno o más archivos Excel (.xlsx) para calcular la posición de híbridos</p>
+    <h1>Posición de Híbridos — Girasol NK</h1>
+    <p>Cargá los dos archivos Excel para calcular la posición por híbrido</p>
   </header>
 
-  <!-- Drop zone -->
-  <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Zona de carga de archivos">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-    </svg>
-    <p class="main">Arrastrá los archivos aquí o hacé clic para seleccionar</p>
-    <p class="sub">Archivos .xlsx — podés cargar varios a la vez</p>
-    <input type="file" id="fileInput" accept=".xlsx" multiple>
+  <!-- Upload areas -->
+  <div class="upload-grid">
+
+    <!-- Pendiente de remitir -->
+    <div class="upload-card">
+      <h3><span class="dot dot-pend"></span>Pendiente de remitir</h3>
+      <div class="drop-zone" id="dropPend" tabindex="0" role="button">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <p class="main" id="pendMain">Arrastrá o hacé clic</p>
+        <p class="sub">.xlsx — exportación de pedidos pendientes de entrega</p>
+        <p class="filename" id="pendName"></p>
+        <input type="file" id="filePend" accept=".xlsx">
+      </div>
+      <button class="btn-clear-file" id="clearPend" style="display:none">✕ Quitar archivo</button>
+    </div>
+
+    <!-- Pedidos a NK -->
+    <div class="upload-card">
+      <h3><span class="dot dot-ped"></span>Pedidos a NK</h3>
+      <div class="drop-zone" id="dropPed" tabindex="0" role="button">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <p class="main" id="pedMain">Arrastrá o hacé clic</p>
+        <p class="sub">.xlsx — exportación de pedidos realizados a NK</p>
+        <p class="filename" id="pedName"></p>
+        <input type="file" id="filePed" accept=".xlsx">
+      </div>
+      <button class="btn-clear-file" id="clearPed" style="display:none">✕ Quitar archivo</button>
+    </div>
+
   </div>
 
-  <!-- File list -->
-  <div class="file-list" id="fileList"></div>
-
-  <!-- Action buttons -->
+  <!-- Actions -->
   <div class="actions">
     <button class="btn btn-primary" id="btnCalcular" disabled>
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 5h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2z"/>
-      </svg>
-      Calcular posición
+      &#9654; Calcular posición
     </button>
     <button class="btn btn-success" id="btnExportar" disabled>
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-      </svg>
-      Exportar CSV
+      &#8595; Exportar CSV
     </button>
     <button class="btn btn-secondary" id="btnLimpiar">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-      </svg>
-      Limpiar todo
+      &#10007; Limpiar todo
     </button>
   </div>
 
-  <!-- Error banner -->
-  <div class="error-banner" id="errorBanner"></div>
+  <!-- Banners -->
+  <div class="banner banner-error" id="errorBanner"></div>
+  <div class="banner banner-warn"  id="warnBanner"></div>
 
   <!-- Results -->
   <div class="results-section" id="resultsSection">
     <div class="summary" id="summaryCards"></div>
+
     <div class="results-header">
       <h2>Tabla de Posición</h2>
     </div>
+
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Artículo</th>
+            <th>Híbrido</th>
             <th>Pendiente de remitir</th>
             <th>Pedidos a NK</th>
             <th>Posición</th>
@@ -318,238 +332,284 @@
         <tbody id="tableBody"></tbody>
       </table>
     </div>
+
+    <details class="unmatched-section" id="unmatchedSection" style="display:none">
+      <summary id="unmatchedTitle"></summary>
+      <div class="unmatched-list" id="unmatchedList"></div>
+    </details>
   </div>
 </div>
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
-  files: [],      // { name, arrayBuffer }
-  results: null,  // array of { articulo, pendiente, pedidos, posicion }
+  pendBuf: null,  // ArrayBuffer — "Pendiente de remitir" file
+  pedBuf:  null,  // ArrayBuffer — "Pedidos a NK" file
+  results: null,
 };
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
-const dropZone      = document.getElementById('dropZone');
-const fileInput     = document.getElementById('fileInput');
-const fileList      = document.getElementById('fileList');
-const btnCalcular   = document.getElementById('btnCalcular');
-const btnExportar   = document.getElementById('btnExportar');
-const btnLimpiar    = document.getElementById('btnLimpiar');
-const errorBanner   = document.getElementById('errorBanner');
-const spinnerOverlay= document.getElementById('spinnerOverlay');
-const resultsSection= document.getElementById('resultsSection');
-const summaryCards  = document.getElementById('summaryCards');
-const tableBody     = document.getElementById('tableBody');
+const dropPend  = document.getElementById('dropPend');
+const dropPed   = document.getElementById('dropPed');
+const filePend  = document.getElementById('filePend');
+const filePed   = document.getElementById('filePed');
+const pendMain  = document.getElementById('pendMain');
+const pedMain   = document.getElementById('pedMain');
+const pendName  = document.getElementById('pendName');
+const pedName   = document.getElementById('pedName');
+const clearPend = document.getElementById('clearPend');
+const clearPed  = document.getElementById('clearPed');
+
+const btnCalcular    = document.getElementById('btnCalcular');
+const btnExportar    = document.getElementById('btnExportar');
+const btnLimpiar     = document.getElementById('btnLimpiar');
+const errorBanner    = document.getElementById('errorBanner');
+const warnBanner     = document.getElementById('warnBanner');
+const spinnerOverlay = document.getElementById('spinnerOverlay');
+const resultsSection = document.getElementById('resultsSection');
+const summaryCards   = document.getElementById('summaryCards');
+const tableBody      = document.getElementById('tableBody');
+const unmatchedSection = document.getElementById('unmatchedSection');
+const unmatchedTitle   = document.getElementById('unmatchedTitle');
+const unmatchedList    = document.getElementById('unmatchedList');
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function showError(msg) {
-  errorBanner.textContent = msg;
-  errorBanner.classList.add('visible');
-}
-function clearError() {
-  errorBanner.classList.remove('visible');
-}
-function showSpinner() { spinnerOverlay.classList.add('visible'); }
-function hideSpinner() { spinnerOverlay.classList.remove('visible'); }
+function showError(msg) { errorBanner.textContent = msg; errorBanner.classList.add('visible'); }
+function clearError()   { errorBanner.classList.remove('visible'); }
+function showWarn(msg)  { warnBanner.textContent = msg; warnBanner.classList.add('visible'); }
+function clearWarn()    { warnBanner.classList.remove('visible'); }
+function showSpinner()  { spinnerOverlay.classList.add('visible'); }
+function hideSpinner()  { spinnerOverlay.classList.remove('visible'); }
 
-function fmt(n) {
-  return n.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+function fmt(n) { return n.toLocaleString('es-AR', { maximumFractionDigits: 0 }); }
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function isFormula(v) {
-  return typeof v === 'string' && v.trim().startsWith('=');
-}
-
-function cellStr(cell) {
+function cellStr(ws, r, c) {
+  const cell = ws[XLSX.utils.encode_cell({ r, c })];
   if (!cell) return null;
   const v = cell.v;
   if (v === null || v === undefined || v === '') return null;
-  if (isFormula(String(v))) return null;
-  return String(v).trim();
+  const s = String(v).trim();
+  if (s.startsWith('=')) return null;
+  return s;
 }
 
-function cellNum(cell) {
+function cellNum(ws, r, c) {
+  const cell = ws[XLSX.utils.encode_cell({ r, c })];
   if (!cell) return 0;
-  const v = cell.v;
-  if (v === null || v === undefined) return 0;
-  const n = Number(v);
+  const n = Number(cell.v);
   return isNaN(n) ? 0 : n;
 }
 
-function findSheet(wb, rawName) {
-  const target = rawName.trim().toLowerCase();
-  const found = wb.SheetNames.find(n => n.trim().toLowerCase() === target);
-  return found ? wb.Sheets[found] : null;
+function findSheet(wb, ...names) {
+  for (const name of names) {
+    const target = name.trim().toLowerCase();
+    const found  = wb.SheetNames.find(n => n.trim().toLowerCase() === target);
+    if (found) return wb.Sheets[found];
+  }
+  return null;
 }
 
-// ── File management ────────────────────────────────────────────────────────
-function addFiles(fileObjs) {
-  Array.from(fileObjs).forEach(f => {
-    if (!f.name.endsWith('.xlsx')) {
-      showError(`El archivo "${f.name}" no es .xlsx y fue ignorado.`);
-      return;
+function maxRow(ws) {
+  if (!ws['!ref']) return 0;
+  return XLSX.utils.decode_range(ws['!ref']).e.r;
+}
+
+// Normalize article name to a match key.
+// Extracts the 4-digit variety code + grade (G1/G2/G3) from any naming convention.
+// e.g. "GIRASOL NK 3969 CL G3 (BOL)" → "3969G3"
+//      "NK3969CL G3"                  → "3969G3"
+//      "SYN3970_CL G2"               → "3970G2"
+function normalizeKey(s) {
+  if (!s) return null;
+  const upper = s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const numMatch   = upper.match(/(\d{4})/);
+  const gradeMatch = upper.match(/G(\d)/);
+  if (!numMatch || !gradeMatch) return null;
+  return numMatch[1] + 'G' + gradeMatch[1];
+}
+
+// ── File loading ───────────────────────────────────────────────────────────
+function loadFile(file, slot) {
+  if (!file || !file.name.endsWith('.xlsx')) {
+    showError(`El archivo debe ser .xlsx`);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (slot === 'pend') {
+      state.pendBuf = e.target.result;
+      pendName.textContent = file.name;
+      pendMain.textContent = '✓ Archivo cargado';
+      dropPend.classList.add('loaded');
+      clearPend.style.display = 'inline-block';
+    } else {
+      state.pedBuf = e.target.result;
+      pedName.textContent = file.name;
+      pedMain.textContent = '✓ Archivo cargado';
+      dropPed.classList.add('loaded');
+      clearPed.style.display = 'inline-block';
     }
-    if (state.files.find(x => x.name === f.name)) return; // dedupe by name
-    const reader = new FileReader();
-    reader.onload = e => {
-      state.files.push({ name: f.name, arrayBuffer: e.target.result });
-      renderFileList();
-      updateButtons();
-    };
-    reader.readAsArrayBuffer(f);
-  });
+    updateButtons();
+  };
+  reader.readAsArrayBuffer(file);
 }
 
-function removeFile(name) {
-  state.files = state.files.filter(f => f.name !== name);
-  renderFileList();
+function clearSlot(slot) {
+  if (slot === 'pend') {
+    state.pendBuf = null;
+    pendName.textContent = '';
+    pendMain.textContent = 'Arrastrá o hacé clic';
+    dropPend.classList.remove('loaded');
+    clearPend.style.display = 'none';
+    filePend.value = '';
+  } else {
+    state.pedBuf = null;
+    pedName.textContent = '';
+    pedMain.textContent = 'Arrastrá o hacé clic';
+    dropPed.classList.remove('loaded');
+    clearPed.style.display = 'none';
+    filePed.value = '';
+  }
   updateButtons();
-  if (state.files.length === 0) resetResults();
-}
-
-function renderFileList() {
-  fileList.innerHTML = '';
-  state.files.forEach(f => {
-    const item = document.createElement('div');
-    item.className = 'file-item';
-    item.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <span title="${f.name}">${f.name}</span>
-      <button title="Quitar archivo" aria-label="Quitar ${f.name}">✕</button>
-    `;
-    item.querySelector('button').addEventListener('click', () => removeFile(f.name));
-    fileList.appendChild(item);
-  });
+  resetResults();
 }
 
 function updateButtons() {
-  btnCalcular.disabled = state.files.length === 0;
+  btnCalcular.disabled = !(state.pendBuf && state.pedBuf);
 }
 
 function resetResults() {
   state.results = null;
   resultsSection.classList.remove('visible');
+  unmatchedSection.style.display = 'none';
   btnExportar.disabled = true;
   summaryCards.innerHTML = '';
   tableBody.innerHTML = '';
 }
 
+// ── Drop zone wiring ───────────────────────────────────────────────────────
+function wireDrop(dropEl, inputEl, slot) {
+  dropEl.addEventListener('click', () => inputEl.click());
+  dropEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') inputEl.click(); });
+  inputEl.addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0], slot);
+    e.target.value = '';
+  });
+  dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('drag-over'); });
+  dropEl.addEventListener('dragleave', () => dropEl.classList.remove('drag-over'));
+  dropEl.addEventListener('drop', e => {
+    e.preventDefault();
+    dropEl.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], slot);
+  });
+}
+
+wireDrop(dropPend, filePend, 'pend');
+wireDrop(dropPed,  filePed,  'ped');
+clearPend.addEventListener('click', e => { e.stopPropagation(); clearSlot('pend'); });
+clearPed.addEventListener ('click', e => { e.stopPropagation(); clearSlot('ped');  });
+
 // ── Core processing ────────────────────────────────────────────────────────
-function processWorkbook(wb) {
-  // Sheet 3: mapping
-  const sheetMap = findSheet(wb, 'pedidos -pend remitir');
-  if (!sheetMap) throw new Error(`Hoja "pedidos -pend remitir" no encontrada.`);
+function parsePendiente(buf) {
+  // Excel: "Pendiente de remitir" sheet
+  // Col 11 = DescArticulo, Col 12 = Cantidad
+  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false });
+  const ws = findSheet(wb, 'Pendiente de remitir', 'Pendiente de remitir ');
+  if (!ws) throw new Error('No se encontró la hoja "Pendiente de remitir" en el archivo de pendientes.');
 
-  // Sheet 1: pendiente de remitir
-  const sheetPend = findSheet(wb, 'Pendiente de remitir');
-  if (!sheetPend) throw new Error(`Hoja "Pendiente de remitir" no encontrada.`);
-
-  // Sheet 2: pedidos a nk
-  const sheetPedidos = findSheet(wb, 'pedidos a nk');
-  if (!sheetPedidos) throw new Error(`Hoja "pedidos a nk" no encontrada.`);
-
-  // Parse mapping (sheet 3)
-  // col 0 = articulo_pte_remitir, col 1 = articulo_nk
-  const mapRange = XLSX.utils.decode_range(sheetMap['!ref'] || 'A1');
-  const mapping = new Map(); // articulo_pte_remitir -> articulo_nk
-  for (let r = 1; r <= mapRange.e.r; r++) {
-    const c0 = sheetMap[XLSX.utils.encode_cell({ r, c: 0 })];
-    const c1 = sheetMap[XLSX.utils.encode_cell({ r, c: 1 })];
-    const art = cellStr(c0);
-    const nk  = cellStr(c1);
-    if (art && nk) mapping.set(art, nk);
-  }
-
-  // Parse pendiente (sheet 1): col 11 = DescArticulo, col 12 = Cantidad
-  // accumulate per articulo
-  const pendMap = new Map(); // articulo -> total qty
-  const pendRange = XLSX.utils.decode_range(sheetPend['!ref'] || 'A1');
-  for (let r = 1; r <= pendRange.e.r; r++) {
-    const cDesc = sheetPend[XLSX.utils.encode_cell({ r, c: 11 })];
-    const cQty  = sheetPend[XLSX.utils.encode_cell({ r, c: 12 })];
-    const desc  = cellStr(cDesc);
+  const pendMap = new Map(); // articulo original → qty
+  const endRow  = maxRow(ws);
+  for (let r = 1; r <= endRow; r++) {
+    const desc = cellStr(ws, r, 11);
     if (!desc) continue;
-    const qty = cellNum(cQty);
+    const qty  = cellNum(ws, r, 12);
     pendMap.set(desc, (pendMap.get(desc) || 0) + qty);
   }
+  return pendMap;
+}
 
-  // Parse pedidos a NK (sheet 2): col 1 = Material desc., col 2 = Sum of Order quantity
-  const pedidosMap = new Map(); // material_desc -> total qty
-  const pedRange = XLSX.utils.decode_range(sheetPedidos['!ref'] || 'A1');
-  for (let r = 1; r <= pedRange.e.r; r++) {
-    const cMat = sheetPedidos[XLSX.utils.encode_cell({ r, c: 1 })];
-    const cQty = sheetPedidos[XLSX.utils.encode_cell({ r, c: 2 })];
-    const mat  = cellStr(cMat);
-    if (!mat) continue;
-    const qty = cellNum(cQty);
-    pedidosMap.set(mat, (pedidosMap.get(mat) || 0) + qty);
+function parsePedidosNK(buf) {
+  // Excel: "pedidos a nk" sheet
+  // Col 0 = Variety, Col 1 = Material desc., Col 2 = Sum of Order quantity
+  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false });
+  const ws = findSheet(wb, 'pedidos a nk', 'Pedidos a nk', 'Pedidos a NK');
+  if (!ws) throw new Error('No se encontró la hoja "pedidos a nk" en el archivo de pedidos a NK.');
+
+  const pedMap = new Map(); // Variety (short) → { desc, qty }
+  const endRow = maxRow(ws);
+  for (let r = 1; r <= endRow; r++) {
+    const variety = cellStr(ws, r, 0);
+    if (!variety) continue;
+    const qty = cellNum(ws, r, 2);
+    const existing = pedMap.get(variety);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      pedMap.set(variety, { variety, qty });
+    }
   }
-
-  return { mapping, pendMap, pedidosMap };
+  return pedMap;
 }
 
 async function calcular() {
   clearError();
+  clearWarn();
   showSpinner();
   resetResults();
 
-  // Use setTimeout so the spinner actually renders before heavy work
   await new Promise(r => setTimeout(r, 30));
 
   try {
-    // Accumulate across files
-    const globalPendMap    = new Map();
-    const globalPedidosMap = new Map();
-    let   globalMapping    = new Map();
+    const pendMap = parsePendiente(state.pendBuf);
+    const pedMap  = parsePedidosNK(state.pedBuf);
 
-    for (const f of state.files) {
-      const wb = XLSX.read(new Uint8Array(f.arrayBuffer), {
-        type: 'array',
-        cellFormula: false,
-      });
+    if (pendMap.size === 0) throw new Error('El archivo de "Pendiente de remitir" no tiene datos de artículos.');
+    if (pedMap.size  === 0) throw new Error('El archivo de "Pedidos a NK" no tiene datos de variedades.');
 
-      let parsed;
-      try {
-        parsed = processWorkbook(wb);
-      } catch (e) {
-        throw new Error(`Error en "${f.name}": ${e.message}`);
+    // Build NK lookup by normalized key → { variety, qty }
+    const pedByKey = new Map();
+    pedMap.forEach((v, variety) => {
+      const key = normalizeKey(variety);
+      if (key) {
+        const existing = pedByKey.get(key);
+        if (existing) existing.qty += v.qty;
+        else pedByKey.set(key, { variety, qty: v.qty });
       }
-
-      // Merge mapping (last file wins for same key — consistent across files typically)
-      parsed.mapping.forEach((v, k) => globalMapping.set(k, v));
-
-      // Sum pendiente
-      parsed.pendMap.forEach((qty, art) => {
-        globalPendMap.set(art, (globalPendMap.get(art) || 0) + qty);
-      });
-
-      // Sum pedidos
-      parsed.pedidosMap.forEach((qty, mat) => {
-        globalPedidosMap.set(mat, (globalPedidosMap.get(mat) || 0) + qty);
-      });
-    }
-
-    if (globalMapping.size === 0) {
-      throw new Error('No se encontraron filas válidas en la hoja de mapeo "pedidos -pend remitir".');
-    }
-
-    // Build results
-    const rows = [];
-    globalMapping.forEach((artNK, artPend) => {
-      const pendiente = globalPendMap.get(artPend) || 0;
-      const pedidos   = globalPedidosMap.get(artNK) || 0;
-      const posicion  = pedidos - pendiente;
-      rows.push({ articulo: artPend, pendiente, pedidos, posicion });
     });
 
-    // Sort by articulo name
+    // Match each pendiente article to a NK variety via normalized key
+    const rows = [];
+    const unmatched = [];
+
+    pendMap.forEach((pendQty, articulo) => {
+      const key = normalizeKey(articulo);
+      const nkEntry = key ? pedByKey.get(key) : null;
+      const pedQty  = nkEntry ? nkEntry.qty : 0;
+      const posicion = pedQty - pendQty;
+      rows.push({ articulo, pendiente: pendQty, pedidos: pedQty, posicion });
+      if (!nkEntry) unmatched.push(articulo);
+    });
+
+    // Also include NK varieties not matched by any pendiente item
+    const matchedKeys = new Set(rows.map(r => normalizeKey(r.articulo)).filter(Boolean));
+    pedByKey.forEach((v, key) => {
+      if (!matchedKeys.has(key)) {
+        rows.push({ articulo: v.variety, pendiente: 0, pedidos: v.qty, posicion: v.qty });
+      }
+    });
+
     rows.sort((a, b) => a.articulo.localeCompare(b.articulo, 'es'));
 
     state.results = rows;
-    renderResults(rows);
+    renderResults(rows, unmatched);
+
+    if (unmatched.length > 0) {
+      showWarn(`${unmatched.length} artículo(s) de "Pendiente de remitir" no pudieron relacionarse con ninguna variedad de NK. Ver detalle más abajo.`);
+    }
+
   } catch (e) {
     showError(e.message);
   } finally {
@@ -557,21 +617,20 @@ async function calcular() {
   }
 }
 
-// ── Render results ─────────────────────────────────────────────────────────
-function renderResults(rows) {
-  const totalPend    = rows.reduce((s, r) => s + r.pendiente, 0);
-  const totalPedidos = rows.reduce((s, r) => s + r.pedidos,   0);
-  const totalPos     = totalPedidos - totalPend;
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderResults(rows, unmatched) {
+  const totalPend = rows.reduce((s, r) => s + r.pendiente, 0);
+  const totalPed  = rows.reduce((s, r) => s + r.pedidos,   0);
+  const totalPos  = totalPed - totalPend;
 
-  // Summary cards
   summaryCards.innerHTML = `
     <div class="card">
-      <div class="label">Total Pendiente de remitir</div>
+      <div class="label">Pendiente de remitir</div>
       <div class="value">${fmt(totalPend)}</div>
     </div>
     <div class="card">
-      <div class="label">Total Pedidos a NK</div>
-      <div class="value">${fmt(totalPedidos)}</div>
+      <div class="label">Pedidos a NK</div>
+      <div class="value">${fmt(totalPed)}</div>
     </div>
     <div class="card ${totalPos > 0 ? 'card-pos' : totalPos < 0 ? 'card-neg' : ''}">
       <div class="label">Posición Total</div>
@@ -579,18 +638,17 @@ function renderResults(rows) {
     </div>
   `;
 
-  // Table rows
   tableBody.innerHTML = '';
   rows.forEach(row => {
-    const cls = row.posicion > 0 ? 'row-pos' : row.posicion < 0 ? 'row-neg' : 'row-zero';
-    const badgeCls = row.posicion > 0 ? 'pos' : row.posicion < 0 ? 'neg' : 'zero';
+    const cls      = row.posicion > 0 ? 'row-pos' : row.posicion < 0 ? 'row-neg' : 'row-zero';
+    const badgeCls = row.posicion > 0 ? 'pos'     : row.posicion < 0 ? 'neg'     : 'zero';
     const tr = document.createElement('tr');
     tr.className = cls;
     tr.innerHTML = `
       <td>${escHtml(row.articulo)}</td>
       <td>${fmt(row.pendiente)}</td>
       <td>${fmt(row.pedidos)}</td>
-      <td><span class="pos-badge ${badgeCls}">${fmt(row.posicion)}</span></td>
+      <td><span class="badge ${badgeCls}">${fmt(row.posicion)}</span></td>
     `;
     tableBody.appendChild(tr);
   });
@@ -598,67 +656,45 @@ function renderResults(rows) {
   resultsSection.classList.add('visible');
   btnExportar.disabled = false;
 
-  // Scroll to results
-  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+  if (unmatched && unmatched.length > 0) {
+    unmatchedTitle.textContent = `⚠ ${unmatched.length} artículo(s) sin coincidencia en Pedidos a NK`;
+    unmatchedList.innerHTML = unmatched.map(a => `• ${escHtml(a)}`).join('<br>');
+    unmatchedSection.style.display = 'block';
+  } else {
+    unmatchedSection.style.display = 'none';
+  }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Export CSV ─────────────────────────────────────────────────────────────
 function exportCSV() {
   if (!state.results) return;
-  const rows = state.results;
-  const BOM  = '﻿'; // UTF-8 BOM so Excel opens correctly
+  const BOM   = '﻿';
   const lines = [
-    ['Artículo','Pendiente de remitir','Pedidos a NK','Posición'].join(';'),
-    ...rows.map(r => [r.articulo, r.pendiente, r.pedidos, r.posicion].join(';')),
+    ['Híbrido', 'Pendiente de remitir', 'Pedidos a NK', 'Posición'].join(';'),
+    ...state.results.map(r => [r.articulo, r.pendiente, r.pedidos, r.posicion].join(';')),
   ];
   const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `posicion_girasol_${isoDate()}.csv`;
+  const a    = Object.assign(document.createElement('a'), { href: url, download: `posicion_girasol_${isoDate()}.csv` });
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-function isoDate() {
-  const d = new Date();
-  return d.toISOString().slice(0,10).replace(/-/g,'');
-}
+function isoDate() { return new Date().toISOString().slice(0, 10).replace(/-/g, ''); }
 
-// ── Event listeners ────────────────────────────────────────────────────────
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-
-fileInput.addEventListener('change', e => {
-  addFiles(e.target.files);
-  e.target.value = ''; // reset so same file can be re-added after removal
-});
-
-dropZone.addEventListener('dragover', e => {
-  e.preventDefault();
-  dropZone.classList.add('drag-over');
-});
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  addFiles(e.dataTransfer.files);
-});
-
+// ── Button wiring ──────────────────────────────────────────────────────────
 btnCalcular.addEventListener('click', calcular);
 btnExportar.addEventListener('click', exportCSV);
 btnLimpiar.addEventListener('click', () => {
-  state.files = [];
-  renderFileList();
-  updateButtons();
-  resetResults();
+  clearSlot('pend');
+  clearSlot('ped');
   clearError();
+  clearWarn();
+  resetResults();
 });
 </script>
 </body>
