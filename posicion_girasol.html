@@ -404,11 +404,14 @@ function cellNum(ws, r, c) {
 }
 
 function findSheet(wb, ...names) {
+  // Try named sheets first
   for (const name of names) {
     const target = name.trim().toLowerCase();
     const found  = wb.SheetNames.find(n => n.trim().toLowerCase() === target);
     if (found) return wb.Sheets[found];
   }
+  // Fallback: first sheet (handles exports where sheet is named "." or similar)
+  if (wb.SheetNames.length > 0) return wb.Sheets[wb.SheetNames[0]];
   return null;
 }
 
@@ -514,43 +517,70 @@ clearPed.addEventListener ('click', e => { e.stopPropagation(); clearSlot('ped')
 
 // ── Core processing ────────────────────────────────────────────────────────
 function parsePendiente(buf) {
-  // Excel: "Pendiente de remitir" sheet
   // Col 11 = DescArticulo, Col 12 = Cantidad
+  // Sheet may be named "Pendiente de remitir", "." or any name — we use first sheet as fallback
   const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false });
   const ws = findSheet(wb, 'Pendiente de remitir', 'Pendiente de remitir ');
-  if (!ws) throw new Error('No se encontró la hoja "Pendiente de remitir" en el archivo de pendientes.');
+  if (!ws) throw new Error('No se pudo leer el archivo de "Pendiente de remitir".');
 
-  const pendMap = new Map(); // articulo original → qty
-  const endRow  = maxRow(ws);
+  // Detect column positions from header row
+  const endRow = maxRow(ws);
+  let colArticulo = 11, colCantidad = 12; // defaults
+  const h0 = cellStr(ws, 0, 0);
+  if (h0) {
+    // Scan header to find DescArticulo and Cantidad columns
+    for (let c = 0; c < 20; c++) {
+      const h = (cellStr(ws, 0, c) || '').toLowerCase();
+      if (h === 'descarticulo') colArticulo = c;
+      if (h === 'cantidad')     colCantidad  = c;
+    }
+  }
+
+  const pendMap = new Map();
   for (let r = 1; r <= endRow; r++) {
-    const desc = cellStr(ws, r, 11);
+    const desc = cellStr(ws, r, colArticulo);
     if (!desc) continue;
-    const qty  = cellNum(ws, r, 12);
+    const qty  = cellNum(ws, r, colCantidad);
     pendMap.set(desc, (pendMap.get(desc) || 0) + qty);
   }
+  if (pendMap.size === 0) throw new Error('El archivo de "Pendiente de remitir" no tiene datos de artículos. Verificá que sea el archivo correcto.');
   return pendMap;
 }
 
 function parsePedidosNK(buf) {
-  // Excel: "pedidos a nk" sheet
-  // Col 0 = Variety, Col 1 = Material desc., Col 2 = Sum of Order quantity
+  // Col 3 = Material desc. (includes grade), Col 4 = cantidad
+  // Sheet may be named "pedidos a nk", "." or any name — we use first sheet as fallback
   const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false });
   const ws = findSheet(wb, 'pedidos a nk', 'Pedidos a nk', 'Pedidos a NK');
-  if (!ws) throw new Error('No se encontró la hoja "pedidos a nk" en el archivo de pedidos a NK.');
+  if (!ws) throw new Error('No se pudo leer el archivo de "Pedidos a NK".');
 
-  const pedMap = new Map(); // Variety (short) → { desc, qty }
+  // Detect column positions from header row
   const endRow = maxRow(ws);
+  let colMaterial = 3, colCantidad = 4; // defaults matching new format
+  const h0 = cellStr(ws, 0, 0);
+  if (h0) {
+    for (let c = 0; c < 10; c++) {
+      const h = (cellStr(ws, 0, c) || '').toLowerCase().replace(/[\s.]/g, '');
+      if (h.includes('materialdesc') || h === 'materialdesc') colMaterial = c;
+      if (h === 'cantidad' || h === 'sumoforderquantity' || h === 'qty') colCantidad = c;
+    }
+  }
+
+  const pedMap = new Map(); // normalizedKey → { label, qty }
   for (let r = 1; r <= endRow; r++) {
-    const variety = cellStr(ws, r, 0);
-    if (!variety) continue;
-    const qty = cellNum(ws, r, 2);
-    const existing = pedMap.get(variety);
+    const matDesc = cellStr(ws, r, colMaterial);
+    if (!matDesc) continue;
+    const qty = cellNum(ws, r, colCantidad);
+    const key = normalizeKey(matDesc);
+    if (!key) continue;
+    const existing = pedMap.get(key);
     if (existing) {
       existing.qty += qty;
     } else {
-      pedMap.set(variety, { variety, qty });
+      pedMap.set(key, { label: matDesc, qty });
     }
   }
+  if (pedMap.size === 0) throw new Error('El archivo de "Pedidos a NK" no tiene datos. Verificá que sea el archivo correcto.');
   return pedMap;
 }
 
@@ -563,41 +593,26 @@ async function calcular() {
   await new Promise(r => setTimeout(r, 30));
 
   try {
-    const pendMap = parsePendiente(state.pendBuf);
-    const pedMap  = parsePedidosNK(state.pedBuf);
+    const pendMap  = parsePendiente(state.pendBuf);
+    const pedByKey = parsePedidosNK(state.pedBuf);  // Map: normalizedKey → { label, qty }
 
-    if (pendMap.size === 0) throw new Error('El archivo de "Pendiente de remitir" no tiene datos de artículos.');
-    if (pedMap.size  === 0) throw new Error('El archivo de "Pedidos a NK" no tiene datos de variedades.');
-
-    // Build NK lookup by normalized key → { variety, qty }
-    const pedByKey = new Map();
-    pedMap.forEach((v, variety) => {
-      const key = normalizeKey(variety);
-      if (key) {
-        const existing = pedByKey.get(key);
-        if (existing) existing.qty += v.qty;
-        else pedByKey.set(key, { variety, qty: v.qty });
-      }
-    });
-
-    // Match each pendiente article to a NK variety via normalized key
+    // Match each pendiente article to NK via normalized key
     const rows = [];
     const unmatched = [];
 
     pendMap.forEach((pendQty, articulo) => {
-      const key = normalizeKey(articulo);
+      const key     = normalizeKey(articulo);
       const nkEntry = key ? pedByKey.get(key) : null;
       const pedQty  = nkEntry ? nkEntry.qty : 0;
-      const posicion = pedQty - pendQty;
-      rows.push({ articulo, pendiente: pendQty, pedidos: pedQty, posicion });
+      rows.push({ articulo, pendiente: pendQty, pedidos: pedQty, posicion: pedQty - pendQty });
       if (!nkEntry) unmatched.push(articulo);
     });
 
-    // Also include NK varieties not matched by any pendiente item
+    // Also show NK varieties not matched by any pendiente item (posicion = full qty)
     const matchedKeys = new Set(rows.map(r => normalizeKey(r.articulo)).filter(Boolean));
     pedByKey.forEach((v, key) => {
       if (!matchedKeys.has(key)) {
-        rows.push({ articulo: v.variety, pendiente: 0, pedidos: v.qty, posicion: v.qty });
+        rows.push({ articulo: v.label, pendiente: 0, pedidos: v.qty, posicion: v.qty });
       }
     });
 
