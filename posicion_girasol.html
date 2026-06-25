@@ -272,6 +272,7 @@
         <table>
           <thead><tr>
             <th>Híbrido</th>
+            <th style="text-align:center">Banda</th>
             <th>Pendiente de remitir</th>
             <th>Pedidos a NK</th>
             <th>Posición</th>
@@ -337,6 +338,7 @@
         <table>
           <thead><tr>
             <th>Híbrido</th>
+            <th style="text-align:center">Banda</th>
             <th>Pendiente de remitir</th>
             <th>Pedidos a NK</th>
             <th>Posición</th>
@@ -460,6 +462,12 @@ function keyMaizFromPendiente(s) {
 // Maíz SKU → {v: variety_num, c: caliber}
 const SKU_MAP_MAIZ = {"11137842":{"v":"800","c":"C22"},"11137845":{"v":"800","c":"R22"},"11137841":{"v":"800","c":"C18"},"11137843":{"v":"800","c":"R17"},"11137844":{"v":"800","c":"R18"},"11137840":{"v":"800","c":"C17"},"11137847":{"v":"800","c":"ESP"},"11137846":{"v":"800","c":"CEC"},"11457723":{"v":"825","c":"C22"},"11457726":{"v":"825","c":"R22"},"11416676":{"v":"825","c":"C22"},"11457725":{"v":"825","c":"R18"},"11416675":{"v":"825","c":"C18"},"11416678":{"v":"825","c":"R18"},"11258580":{"v":"835","c":"C22"},"11258583":{"v":"835","c":"R22"},"11258579":{"v":"835","c":"C18"},"11258581":{"v":"835","c":"R17"},"11258582":{"v":"835","c":"R18"},"11258228":{"v":"835","c":"C17"},"11258585":{"v":"835","c":"ESP"},"11258584":{"v":"835","c":"CEC"},"11129993":{"v":"842","c":"C22"},"11129996":{"v":"842","c":"R22"},"11129992":{"v":"842","c":"C18"},"11129994":{"v":"842","c":"R17"},"11129995":{"v":"842","c":"R18"},"11129991":{"v":"842","c":"C17"},"11129998":{"v":"842","c":"ESP"},"11129997":{"v":"842","c":"CEC"},"11390716":{"v":"842","c":"C22"},"11390719":{"v":"842","c":"R22"},"11390715":{"v":"842","c":"C18"},"11390717":{"v":"842","c":"R17"},"11390718":{"v":"842","c":"R18"},"11390714":{"v":"842","c":"C17"},"11390721":{"v":"842","c":"ESP"},"11390720":{"v":"842","c":"CEC"},"11246835":{"v":"855","c":"C22"},"11246838":{"v":"855","c":"R22"},"11246834":{"v":"855","c":"C18"},"11246836":{"v":"855","c":"R17"},"11246837":{"v":"855","c":"R18"},"11215725":{"v":"870","c":"C22"},"11215728":{"v":"870","c":"R22"},"11215724":{"v":"870","c":"C18"},"11215726":{"v":"870","c":"R17"},"11215727":{"v":"870","c":"R18"},"11215723":{"v":"870","c":"C17"},"11242285":{"v":"733","c":"C22"},"11242288":{"v":"733","c":"R22"},"11242284":{"v":"733","c":"C18"},"11242287":{"v":"733","c":"R18"},"11407264":{"v":"733","c":"C22"},"11407267":{"v":"733","c":"R22"},"11407263":{"v":"733","c":"C18"},"11407266":{"v":"733","c":"R18"},"10723056":{"v":"126","c":"C22"},"10723059":{"v":"126","c":"R22"},"10723055":{"v":"126","c":"C18"},"10723057":{"v":"126","c":"R17"},"10723058":{"v":"126","c":"R18"},"10723054":{"v":"126","c":"C17"},"10723061":{"v":"126","c":"ESP"},"10723060":{"v":"126","c":"CEC"},"10728371":{"v":"126","c":"C22"},"10728374":{"v":"126","c":"R22"},"10728370":{"v":"126","c":"C18"},"10728372":{"v":"126","c":"R17"},"10728373":{"v":"126","c":"R18"},"10728369":{"v":"126","c":"C17"},"10728376":{"v":"126","c":"ESP"},"10728375":{"v":"126","c":"CEC"},"11242277":{"v":"505","c":"C22"},"11242280":{"v":"505","c":"R22"},"11242276":{"v":"505","c":"C18"},"11242278":{"v":"505","c":"R17"},"11242279":{"v":"505","c":"R18"},"11242275":{"v":"505","c":"C17"},"11390734":{"v":"505","c":"C22"},"11390737":{"v":"505","c":"R22"},"11390733":{"v":"505","c":"C18"},"11390736":{"v":"505","c":"R18"},"10637294":{"v":"840","c":"C22"},"10637293":{"v":"840","c":"C18"},"10637295":{"v":"840","c":"R17"},"10640719":{"v":"840","c":"ESP"},"10892155":{"v":"840","c":"C22"},"10892158":{"v":"840","c":"R22"},"10892154":{"v":"840","c":"C18"},"10892156":{"v":"840","c":"R17"},"10892157":{"v":"840","c":"R18"},"10892153":{"v":"840","c":"C17"},"10892160":{"v":"840","c":"ESP"},"10892159":{"v":"840","c":"CEC"},"11009257":{"v":"897","c":"C22"},"11009620":{"v":"897","c":"R22"},"11009256":{"v":"897","c":"C18"},"11009619":{"v":"897","c":"R18"},"11009255":{"v":"897","c":"C17"},"10777065":{"v":"979","c":"C22"},"10777068":{"v":"979","c":"R22"},"10777064":{"v":"979","c":"C18"},"10777066":{"v":"979","c":"R17"},"10777067":{"v":"979","c":"R18"},"10777063":{"v":"979","c":"C17"},"10777080":{"v":"979","c":"ESP"},"10777079":{"v":"979","c":"CEC"}};
 
+// ── Caliber/grade order and banda maps ───────────────────────
+const MAIZ_CAL_ORDER      = ['CEC','ESP','C17','R17','C18','R18','C22','R22'];
+const MAIZ_BANDA          = {CEC:'4',ESP:'3',C17:'3',R17:'2',C18:'2',R18:'2',C22:'1',R22:'1'};
+const GIRASOL_GRADE_ORDER = ['G4','G3','G2','G1','G0'];
+const GIRASOL_BANDA       = {G4:'3',G3:'2',G2:'1',G1:'1',G0:'1'};
+
 // ── Pendiente de remitir parser ───────────────────────────────
 // Col 11 = DescArticulo, Col 12 = Cantidad (defaults; auto-detected from headers)
 function parsePendiente(buf, cropPrefix) {
@@ -570,8 +578,44 @@ function calculate(pendMap, pedByKey, keyFn) {
     }
   });
 
-  rows.sort((a, b) => a.articulo.localeCompare(b.articulo, 'es'));
   return { rows, unmatched };
+}
+
+// ── Sort rows and annotate with banda (crop-specific) ─────────
+function sortAndAnnotate(crop, rows) {
+  if (crop === 'maiz') {
+    rows.forEach(row => {
+      const k   = keyMaizFromPendiente(row.articulo) || '';
+      const sep = k.indexOf('_');
+      const cal = sep >= 0 ? k.slice(sep + 1) : '';
+      row._variety = sep >= 0 ? k.slice(0, sep) : k;
+      row._cal     = cal;
+      row.banda    = MAIZ_BANDA[cal] ? 'Banda ' + MAIZ_BANDA[cal] : '-';
+    });
+    rows.sort((a, b) => {
+      const vc = a._variety.localeCompare(b._variety, 'es');
+      if (vc !== 0) return vc;
+      const ai = MAIZ_CAL_ORDER.indexOf(a._cal);
+      const bi = MAIZ_CAL_ORDER.indexOf(b._cal);
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+    });
+  } else {
+    rows.forEach(row => {
+      const k   = keyGirasol(row.articulo) || '';
+      const gm  = k.match(/G(\d)$/);
+      const grade = gm ? 'G' + gm[1] : '';
+      row._variety = k.replace(/G\d$/, '');
+      row._grade   = grade;
+      row.banda    = GIRASOL_BANDA[grade] ? 'Banda ' + GIRASOL_BANDA[grade] : '-';
+    });
+    rows.sort((a, b) => {
+      const vc = a._variety.localeCompare(b._variety, 'es');
+      if (vc !== 0) return vc;
+      const ai = GIRASOL_GRADE_ORDER.indexOf(a._grade);
+      const bi = GIRASOL_GRADE_ORDER.indexOf(b._grade);
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+    });
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -606,6 +650,7 @@ function renderResults(crop, rows, unmatched) {
     tr.className = cls;
     tr.innerHTML = `
       <td>${escHtml(row.articulo)}</td>
+      <td style="text-align:center">${escHtml(row.banda || '-')}</td>
       <td>${fmt(row.pendiente)}</td>
       <td>${fmt(row.pedidos)}</td>
       <td><span class="badge ${bdg}">${fmt(row.posicion)}</span></td>
@@ -718,6 +763,7 @@ async function calcular(crop) {
     if (pedByKey.size === 0) throw new Error(`No se encontraron pedidos de ${crop} en el archivo de "Pedidos a NK". Verificá que sea el archivo correcto.`);
 
     const { rows, unmatched } = calculate(pendMap, pedByKey, keyFn);
+    sortAndAnnotate(crop, rows);
     crops[crop].results = rows;
     renderResults(crop, rows, unmatched);
 
@@ -740,8 +786,8 @@ function exportCSV(crop) {
   if (!rows) return;
   const BOM   = '﻿';
   const lines = [
-    ['Híbrido','Pendiente de remitir','Pedidos a NK','Posición'].join(';'),
-    ...rows.map(r => [r.articulo, r.pendiente, r.pedidos, r.posicion].join(';')),
+    ['Híbrido','Banda','Pendiente de remitir','Pedidos a NK','Posición'].join(';'),
+    ...rows.map(r => [r.articulo, r.banda||'-', r.pendiente, r.pedidos, r.posicion].join(';')),
   ];
   const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
