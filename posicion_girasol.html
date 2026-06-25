@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Posición Girasol — NK</title>
+  <title>Posición de Híbridos — NK</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,16 +18,46 @@
 
     .container { max-width: 1100px; margin: 0 auto; }
 
-    header { text-align: center; margin-bottom: 32px; }
-    header h1 { font-size: 1.75rem; font-weight: 700; color: #2d3748; }
-    header p { color: #718096; margin-top: 6px; font-size: 0.95rem; }
+    header { text-align: center; margin-bottom: 28px; }
+    header h1 { font-size: 1.7rem; font-weight: 700; color: #2d3748; }
+    header p  { color: #718096; margin-top: 6px; font-size: 0.93rem; }
 
-    /* Upload grid */
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      background: #e2e8f0;
+      border-radius: 12px;
+      padding: 4px;
+      width: fit-content;
+    }
+    .tab-btn {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 9px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: #718096;
+      transition: background 0.18s, color 0.18s;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: #2d3748;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Upload grid ── */
     .upload-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 24px;
+      gap: 18px;
+      margin-bottom: 20px;
     }
     @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
 
@@ -35,213 +65,141 @@
       background: #fff;
       border-radius: 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-      padding: 20px;
+      padding: 18px;
     }
     .upload-card h3 {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #4a5568;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .upload-card h3 .dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .dot-pend { background: #ed8936; }
-    .dot-ped  { background: #4299e1; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-orange { background: #ed8936; }
+    .dot-blue   { background: #4299e1; }
 
     .drop-zone {
       border: 2.5px dashed #a0aec0;
       border-radius: 10px;
-      padding: 28px 16px;
+      padding: 26px 14px;
       text-align: center;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
     }
-    .drop-zone:hover, .drop-zone.drag-over {
-      border-color: #4299e1;
-      background: #ebf8ff;
-    }
-    .drop-zone.loaded {
-      border-color: #48bb78;
-      background: #f0fff4;
-    }
-    .drop-zone svg { width: 36px; height: 36px; color: #a0aec0; margin-bottom: 8px; }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #4299e1; background: #ebf8ff; }
+    .drop-zone.loaded { border-color: #48bb78; background: #f0fff4; }
+    .drop-zone svg { width: 34px; height: 34px; color: #a0aec0; margin-bottom: 8px; }
     .drop-zone.loaded svg { color: #48bb78; }
-    .drop-zone p.main { font-size: 0.92rem; font-weight: 600; color: #4a5568; }
-    .drop-zone p.sub  { font-size: 0.8rem; color: #a0aec0; margin-top: 4px; }
-    .drop-zone p.filename {
-      font-size: 0.85rem; font-weight: 600;
-      color: #276749; margin-top: 6px;
-      word-break: break-all;
-    }
+    .drop-zone p.dz-main { font-size: 0.9rem; font-weight: 600; color: #4a5568; }
+    .drop-zone p.dz-sub  { font-size: 0.78rem; color: #a0aec0; margin-top: 4px; }
+    .drop-zone p.dz-name { font-size: 0.82rem; font-weight: 600; color: #276749; margin-top: 6px; word-break: break-all; }
     .drop-zone input[type="file"] { display: none; }
 
     .btn-clear-file {
-      margin-top: 10px;
+      margin-top: 9px;
       background: none;
       border: 1px solid #fc8181;
       color: #c53030;
       border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 0.78rem;
+      padding: 3px 10px;
+      font-size: 0.76rem;
       cursor: pointer;
     }
     .btn-clear-file:hover { background: #fff5f5; }
 
-    /* Actions */
-    .actions {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
+    /* ── Actions ── */
+    .actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .btn {
-      padding: 10px 22px;
-      border-radius: 8px;
-      border: none;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
+      padding: 10px 22px; border-radius: 8px; border: none;
+      font-size: 0.93rem; font-weight: 600; cursor: pointer;
       transition: opacity 0.15s, transform 0.1s;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
+      display: inline-flex; align-items: center; gap: 7px;
     }
     .btn:active { transform: scale(0.97); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary  { background: #4299e1; color: #fff; }
-    .btn-primary:hover:not(:disabled)  { background: #3182ce; }
-    .btn-success  { background: #48bb78; color: #fff; }
-    .btn-success:hover:not(:disabled)  { background: #38a169; }
-    .btn-secondary{ background: #e2e8f0; color: #4a5568; }
-    .btn-secondary:hover:not(:disabled){ background: #cbd5e0; }
+    .btn-primary   { background: #4299e1; color: #fff; }
+    .btn-primary:hover:not(:disabled)   { background: #3182ce; }
+    .btn-success   { background: #48bb78; color: #fff; }
+    .btn-success:hover:not(:disabled)   { background: #38a169; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; }
+    .btn-secondary:hover:not(:disabled) { background: #cbd5e0; }
 
-    /* Spinner */
+    /* ── Spinner ── */
     .spinner-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(255,255,255,0.8);
-      z-index: 100; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.82); z-index: 100;
+      align-items: center; justify-content: center;
       flex-direction: column; gap: 14px;
     }
     .spinner-overlay.visible { display: flex; }
     .spinner {
       width: 44px; height: 44px;
-      border: 4px solid #e2e8f0;
-      border-top-color: #4299e1;
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
+      border: 4px solid #e2e8f0; border-top-color: #4299e1;
+      border-radius: 50%; animation: spin 0.75s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner-overlay p { font-size: 0.95rem; color: #4a5568; font-weight: 500; }
 
-    /* Banners */
-    .banner {
-      display: none;
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 0.9rem;
-      margin-bottom: 20px;
-    }
+    /* ── Banners ── */
+    .banner { display: none; border-radius: 8px; padding: 11px 15px; font-size: 0.88rem; margin-bottom: 16px; }
     .banner.visible { display: block; }
     .banner-error { background: #fff5f5; border: 1px solid #fc8181; color: #c53030; }
     .banner-warn  { background: #fffbeb; border: 1px solid #f6e05e; color: #744210; }
 
-    /* Summary cards */
+    /* ── Summary cards ── */
     .summary {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 14px;
-      margin-bottom: 24px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px; margin-bottom: 22px;
     }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 18px 20px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-    .card .label {
-      font-size: 0.75rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.05em;
-      color: #a0aec0; margin-bottom: 6px;
-    }
-    .card .value { font-size: 1.6rem; font-weight: 700; color: #2d3748; }
+    .card { background: #fff; border-radius: 12px; padding: 17px 19px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card .label { font-size: 0.73rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #a0aec0; margin-bottom: 5px; }
+    .card .value { font-size: 1.55rem; font-weight: 700; color: #2d3748; }
     .card.card-pos .value { color: #276749; }
     .card.card-neg .value { color: #c53030; }
 
-    /* Results */
+    /* ── Results ── */
     .results-section { display: none; }
     .results-section.visible { display: block; }
 
-    .results-header {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
-    }
-    .results-header h2 { font-size: 1.1rem; font-weight: 700; color: #2d3748; }
+    .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+    .results-header h2 { font-size: 1.05rem; font-weight: 700; color: #2d3748; }
 
-    .table-wrap {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-      overflow: auto;
-    }
-    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .table-wrap { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
     thead tr { background: #2d3748; color: #fff; }
-    th {
-      padding: 12px 16px; text-align: left;
-      font-weight: 600; font-size: 0.8rem;
-      text-transform: uppercase; letter-spacing: 0.04em;
-      white-space: nowrap;
-    }
+    th { padding: 11px 15px; text-align: left; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
     th:not(:first-child) { text-align: right; }
-    td { padding: 10px 16px; border-bottom: 1px solid #edf2f7; }
+    td { padding: 10px 15px; border-bottom: 1px solid #edf2f7; }
     td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover { filter: brightness(0.97); }
-
     tr.row-pos  { background: #f0fff4; }
     tr.row-neg  { background: #fff5f5; }
     tr.row-zero { background: #fffff0; }
 
-    .badge {
-      display: inline-block;
-      padding: 2px 9px; border-radius: 99px;
-      font-weight: 700; font-size: 0.85rem;
-    }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-weight: 700; font-size: 0.83rem; }
     .badge.pos  { background: #c6f6d5; color: #276749; }
     .badge.neg  { background: #fed7d7; color: #c53030; }
     .badge.zero { background: #fefcbf; color: #744210; }
 
-    .unmatched-section {
-      margin-top: 20px;
+    details.unmatched {
+      margin-top: 18px;
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
       overflow: hidden;
     }
-    .unmatched-section summary {
-      padding: 14px 18px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: #744210;
-      cursor: pointer;
-      background: #fffbeb;
-      border-radius: 12px;
+    details.unmatched summary {
+      padding: 13px 17px; font-weight: 600; font-size: 0.87rem;
+      color: #744210; cursor: pointer; background: #fffbeb;
+      border-radius: 12px; list-style: none;
     }
-    .unmatched-section[open] summary { border-radius: 12px 12px 0 0; }
-    .unmatched-list {
-      padding: 12px 18px;
-      font-size: 0.85rem;
-      color: #4a5568;
-      line-height: 1.8;
-    }
+    details.unmatched[open] summary { border-radius: 12px 12px 0 0; }
+    .unmatched-list { padding: 11px 17px; font-size: 0.83rem; color: #4a5568; line-height: 1.9; }
   </style>
 </head>
 <body>
@@ -253,135 +211,184 @@
 
 <div class="container">
   <header>
-    <h1>Posición de Híbridos — Girasol NK</h1>
-    <p>Cargá los dos archivos Excel para calcular la posición por híbrido</p>
+    <h1>Posición de Híbridos — NK</h1>
+    <p>Calculá la posición por híbrido para Girasol y Maíz</p>
   </header>
 
-  <!-- Upload areas -->
-  <div class="upload-grid">
-
-    <!-- Pendiente de remitir -->
-    <div class="upload-card">
-      <h3><span class="dot dot-pend"></span>Pendiente de remitir</h3>
-      <div class="drop-zone" id="dropPend" tabindex="0" role="button">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-        </svg>
-        <p class="main" id="pendMain">Arrastrá o hacé clic</p>
-        <p class="sub">.xlsx — exportación de pedidos pendientes de entrega</p>
-        <p class="filename" id="pendName"></p>
-        <input type="file" id="filePend" accept=".xlsx">
-      </div>
-      <button class="btn-clear-file" id="clearPend" style="display:none">✕ Quitar archivo</button>
-    </div>
-
-    <!-- Pedidos a NK -->
-    <div class="upload-card">
-      <h3><span class="dot dot-ped"></span>Pedidos a NK</h3>
-      <div class="drop-zone" id="dropPed" tabindex="0" role="button">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-        </svg>
-        <p class="main" id="pedMain">Arrastrá o hacé clic</p>
-        <p class="sub">.xlsx — exportación de pedidos realizados a NK</p>
-        <p class="filename" id="pedName"></p>
-        <input type="file" id="filePed" accept=".xlsx">
-      </div>
-      <button class="btn-clear-file" id="clearPed" style="display:none">✕ Quitar archivo</button>
-    </div>
-
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="girasol">🌻 Girasol</button>
+    <button class="tab-btn"        data-tab="maiz">🌽 Maíz</button>
   </div>
 
-  <!-- Actions -->
-  <div class="actions">
-    <button class="btn btn-primary" id="btnCalcular" disabled>
-      &#9654; Calcular posición
-    </button>
-    <button class="btn btn-success" id="btnExportar" disabled>
-      &#8595; Exportar CSV
-    </button>
-    <button class="btn btn-secondary" id="btnLimpiar">
-      &#10007; Limpiar todo
-    </button>
-  </div>
+  <!-- ══ GIRASOL ══ -->
+  <div class="tab-panel active" id="panel-girasol">
 
-  <!-- Banners -->
-  <div class="banner banner-error" id="errorBanner"></div>
-  <div class="banner banner-warn"  id="warnBanner"></div>
+    <div class="upload-grid">
+      <div class="upload-card">
+        <h3><span class="dot dot-orange"></span>Pendiente de remitir</h3>
+        <div class="drop-zone" id="dz-girasol-pend" tabindex="0" role="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="dz-main" id="lbl-girasol-pend-main">Arrastrá o hacé clic</p>
+          <p class="dz-sub">Exportación de pedidos pendientes de entrega</p>
+          <p class="dz-name" id="lbl-girasol-pend-name"></p>
+          <input type="file" id="inp-girasol-pend" accept=".xlsx">
+        </div>
+        <button class="btn-clear-file" id="clr-girasol-pend" style="display:none">✕ Quitar archivo</button>
+      </div>
 
-  <!-- Results -->
-  <div class="results-section" id="resultsSection">
-    <div class="summary" id="summaryCards"></div>
-
-    <div class="results-header">
-      <h2>Tabla de Posición</h2>
+      <div class="upload-card">
+        <h3><span class="dot dot-blue"></span>Pedidos a NK</h3>
+        <div class="drop-zone" id="dz-girasol-ped" tabindex="0" role="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="dz-main" id="lbl-girasol-ped-main">Arrastrá o hacé clic</p>
+          <p class="dz-sub">Exportación de pedidos realizados a NK</p>
+          <p class="dz-name" id="lbl-girasol-ped-name"></p>
+          <input type="file" id="inp-girasol-ped" accept=".xlsx">
+        </div>
+        <button class="btn-clear-file" id="clr-girasol-ped" style="display:none">✕ Quitar archivo</button>
+      </div>
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
+    <div class="actions">
+      <button class="btn btn-primary"   id="btn-girasol-calc"  disabled>▶ Calcular posición</button>
+      <button class="btn btn-success"   id="btn-girasol-export" disabled>↓ Exportar CSV</button>
+      <button class="btn btn-secondary" id="btn-girasol-clear">✕ Limpiar</button>
+    </div>
+
+    <div class="banner banner-error" id="err-girasol"></div>
+    <div class="banner banner-warn"  id="wrn-girasol"></div>
+
+    <div class="results-section" id="res-girasol">
+      <div class="summary" id="cards-girasol"></div>
+      <div class="results-header"><h2>Tabla de Posición — Girasol</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
             <th>Híbrido</th>
             <th>Pendiente de remitir</th>
             <th>Pedidos a NK</th>
             <th>Posición</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+          </tr></thead>
+          <tbody id="tbody-girasol"></tbody>
+        </table>
+      </div>
+      <details class="unmatched" id="unm-girasol" style="display:none">
+        <summary id="unm-girasol-title"></summary>
+        <div class="unmatched-list" id="unm-girasol-list"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ══ MAÍZ ══ -->
+  <div class="tab-panel" id="panel-maiz">
+
+    <div class="upload-grid">
+      <div class="upload-card">
+        <h3><span class="dot dot-orange"></span>Pendiente de remitir</h3>
+        <div class="drop-zone" id="dz-maiz-pend" tabindex="0" role="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="dz-main" id="lbl-maiz-pend-main">Arrastrá o hacé clic</p>
+          <p class="dz-sub">Exportación de pedidos pendientes de entrega</p>
+          <p class="dz-name" id="lbl-maiz-pend-name"></p>
+          <input type="file" id="inp-maiz-pend" accept=".xlsx">
+        </div>
+        <button class="btn-clear-file" id="clr-maiz-pend" style="display:none">✕ Quitar archivo</button>
+      </div>
+
+      <div class="upload-card">
+        <h3><span class="dot dot-blue"></span>Pedidos a NK</h3>
+        <div class="drop-zone" id="dz-maiz-ped" tabindex="0" role="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p class="dz-main" id="lbl-maiz-ped-main">Arrastrá o hacé clic</p>
+          <p class="dz-sub">Exportación de pedidos realizados a NK (puede ser el mismo archivo que Girasol)</p>
+          <p class="dz-name" id="lbl-maiz-ped-name"></p>
+          <input type="file" id="inp-maiz-ped" accept=".xlsx">
+        </div>
+        <button class="btn-clear-file" id="clr-maiz-ped" style="display:none">✕ Quitar archivo</button>
+      </div>
     </div>
 
-    <details class="unmatched-section" id="unmatchedSection" style="display:none">
-      <summary id="unmatchedTitle"></summary>
-      <div class="unmatched-list" id="unmatchedList"></div>
-    </details>
-  </div>
-</div>
+    <div class="actions">
+      <button class="btn btn-primary"   id="btn-maiz-calc"   disabled>▶ Calcular posición</button>
+      <button class="btn btn-success"   id="btn-maiz-export" disabled>↓ Exportar CSV</button>
+      <button class="btn btn-secondary" id="btn-maiz-clear">✕ Limpiar</button>
+    </div>
+
+    <div class="banner banner-error" id="err-maiz"></div>
+    <div class="banner banner-warn"  id="wrn-maiz"></div>
+
+    <div class="results-section" id="res-maiz">
+      <div class="summary" id="cards-maiz"></div>
+      <div class="results-header"><h2>Tabla de Posición — Maíz</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Híbrido</th>
+            <th>Pendiente de remitir</th>
+            <th>Pedidos a NK</th>
+            <th>Posición</th>
+          </tr></thead>
+          <tbody id="tbody-maiz"></tbody>
+        </table>
+      </div>
+      <details class="unmatched" id="unm-maiz" style="display:none">
+        <summary id="unm-maiz-title"></summary>
+        <div class="unmatched-list" id="unm-maiz-list"></div>
+      </details>
+    </div>
+  </div><!-- /panel-maiz -->
+
+</div><!-- /container -->
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-const state = {
-  pendBuf: null,  // ArrayBuffer — "Pendiente de remitir" file
-  pedBuf:  null,  // ArrayBuffer — "Pedidos a NK" file
-  results: null,
+// ══════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════
+const crops = {
+  girasol: { pendBuf: null, pedBuf: null, results: null },
+  maiz:    { pendBuf: null, pedBuf: null, results: null },
 };
 
-// ── DOM refs ───────────────────────────────────────────────────────────────
-const dropPend  = document.getElementById('dropPend');
-const dropPed   = document.getElementById('dropPed');
-const filePend  = document.getElementById('filePend');
-const filePed   = document.getElementById('filePed');
-const pendMain  = document.getElementById('pendMain');
-const pedMain   = document.getElementById('pedMain');
-const pendName  = document.getElementById('pendName');
-const pedName   = document.getElementById('pedName');
-const clearPend = document.getElementById('clearPend');
-const clearPed  = document.getElementById('clearPed');
+// ══════════════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+  });
+});
 
-const btnCalcular    = document.getElementById('btnCalcular');
-const btnExportar    = document.getElementById('btnExportar');
-const btnLimpiar     = document.getElementById('btnLimpiar');
-const errorBanner    = document.getElementById('errorBanner');
-const warnBanner     = document.getElementById('warnBanner');
-const spinnerOverlay = document.getElementById('spinnerOverlay');
-const resultsSection = document.getElementById('resultsSection');
-const summaryCards   = document.getElementById('summaryCards');
-const tableBody      = document.getElementById('tableBody');
-const unmatchedSection = document.getElementById('unmatchedSection');
-const unmatchedTitle   = document.getElementById('unmatchedTitle');
-const unmatchedList    = document.getElementById('unmatchedList');
+// ══════════════════════════════════════════════════════════════
+//  SHARED HELPERS
+// ══════════════════════════════════════════════════════════════
+function showSpinner()  { document.getElementById('spinnerOverlay').classList.add('visible'); }
+function hideSpinner()  { document.getElementById('spinnerOverlay').classList.remove('visible'); }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-function showError(msg) { errorBanner.textContent = msg; errorBanner.classList.add('visible'); }
-function clearError()   { errorBanner.classList.remove('visible'); }
-function showWarn(msg)  { warnBanner.textContent = msg; warnBanner.classList.add('visible'); }
-function clearWarn()    { warnBanner.classList.remove('visible'); }
-function showSpinner()  { spinnerOverlay.classList.add('visible'); }
-function hideSpinner()  { spinnerOverlay.classList.remove('visible'); }
+function setBanner(id, msg) {
+  const el = document.getElementById(id);
+  if (msg) { el.textContent = msg; el.classList.add('visible'); }
+  else      { el.classList.remove('visible'); }
+}
 
-function fmt(n) { return n.toLocaleString('es-AR', { maximumFractionDigits: 0 }); }
+function fmt(n) { return Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 }); }
+
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -389,11 +396,8 @@ function escHtml(s) {
 function cellStr(ws, r, c) {
   const cell = ws[XLSX.utils.encode_cell({ r, c })];
   if (!cell) return null;
-  const v = cell.v;
-  if (v === null || v === undefined || v === '') return null;
-  const s = String(v).trim();
-  if (s.startsWith('=')) return null;
-  return s;
+  const v = String(cell.v ?? '').trim();
+  return (!v || v.startsWith('=')) ? null : v;
 }
 
 function cellNum(ws, r, c) {
@@ -403,242 +407,143 @@ function cellNum(ws, r, c) {
   return isNaN(n) ? 0 : n;
 }
 
-function findSheet(wb, ...names) {
-  // Try named sheets first
-  for (const name of names) {
-    const target = name.trim().toLowerCase();
-    const found  = wb.SheetNames.find(n => n.trim().toLowerCase() === target);
-    if (found) return wb.Sheets[found];
+function readFirstSheet(buf) {
+  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false });
+  if (!wb.SheetNames.length) throw new Error('El archivo no tiene hojas.');
+  // Prefer named sheets, fallback to first
+  const preferredNames = ['pendiente de remitir', 'pedidos a nk', 'sheet1', '.'];
+  let sheetName = wb.SheetNames[0];
+  for (const name of wb.SheetNames) {
+    if (preferredNames.includes(name.trim().toLowerCase())) { sheetName = name; break; }
   }
-  // Fallback: first sheet (handles exports where sheet is named "." or similar)
-  if (wb.SheetNames.length > 0) return wb.Sheets[wb.SheetNames[0]];
-  return null;
+  const ws = wb.Sheets[sheetName];
+  if (!ws) throw new Error('No se pudo leer la hoja.');
+  return ws;
 }
 
 function maxRow(ws) {
-  if (!ws['!ref']) return 0;
-  return XLSX.utils.decode_range(ws['!ref']).e.r;
+  return ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']).e.r : 0;
 }
 
-// Normalize article name to a match key.
-// Extracts the 4-digit variety code + grade (G1/G2/G3) from any naming convention.
-// e.g. "GIRASOL NK 3969 CL G3 (BOL)" → "3969G3"
-//      "NK3969CL G3"                  → "3969G3"
-//      "SYN3970_CL G2"               → "3970G2"
-function normalizeKey(s) {
+// Detect column index from header row by keyword
+function detectCol(ws, ...keywords) {
+  for (let c = 0; c < 20; c++) {
+    const h = (cellStr(ws, 0, c) || '').toLowerCase().replace(/[\s.]/g, '');
+    for (const kw of keywords) {
+      if (h.includes(kw)) return c;
+    }
+  }
+  return null;
+}
+
+// ── Normalization keys ────────────────────────────────────────
+
+// Girasol: 4-digit code + G{n} grade → "3969G1"
+function keyGirasol(s) {
   if (!s) return null;
-  const upper = s.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const numMatch   = upper.match(/(\d{4})/);
-  const gradeMatch = upper.match(/G(\d)/);
-  if (!numMatch || !gradeMatch) return null;
-  return numMatch[1] + 'G' + gradeMatch[1];
+  const u = s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const num   = u.match(/(\d{4})/);
+  const grade = u.match(/G(\d)/);
+  return (num && grade) ? num[1] + 'G' + grade[1] : null;
 }
 
-// ── File loading ───────────────────────────────────────────────────────────
-function loadFile(file, slot) {
-  if (!file || !file.name.endsWith('.xlsx')) {
-    showError(`El archivo debe ser .xlsx`);
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = e => {
-    if (slot === 'pend') {
-      state.pendBuf = e.target.result;
-      pendName.textContent = file.name;
-      pendMain.textContent = '✓ Archivo cargado';
-      dropPend.classList.add('loaded');
-      clearPend.style.display = 'inline-block';
-    } else {
-      state.pedBuf = e.target.result;
-      pedName.textContent = file.name;
-      pedMain.textContent = '✓ Archivo cargado';
-      dropPed.classList.add('loaded');
-      clearPed.style.display = 'inline-block';
-    }
-    updateButtons();
-  };
-  reader.readAsArrayBuffer(file);
+// Maíz: NK/SY variety 3-digit code → "842"
+function keyMaiz(s) {
+  if (!s) return null;
+  const m = s.toUpperCase().match(/(?:NK|SY[N]?)[\s]?(\d{3})/);
+  return m ? m[1] : null;
 }
 
-function clearSlot(slot) {
-  if (slot === 'pend') {
-    state.pendBuf = null;
-    pendName.textContent = '';
-    pendMain.textContent = 'Arrastrá o hacé clic';
-    dropPend.classList.remove('loaded');
-    clearPend.style.display = 'none';
-    filePend.value = '';
-  } else {
-    state.pedBuf = null;
-    pedName.textContent = '';
-    pedMain.textContent = 'Arrastrá o hacé clic';
-    dropPed.classList.remove('loaded');
-    clearPed.style.display = 'none';
-    filePed.value = '';
-  }
-  updateButtons();
-  resetResults();
-}
+// ── Pendiente de remitir parser ───────────────────────────────
+// Col 11 = DescArticulo, Col 12 = Cantidad (defaults; auto-detected from headers)
+function parsePendiente(buf, cropPrefix) {
+  const ws  = readFirstSheet(buf);
+  const end = maxRow(ws);
 
-function updateButtons() {
-  btnCalcular.disabled = !(state.pendBuf && state.pedBuf);
-}
+  let colArt = detectCol(ws, 'descarticulo') ?? 11;
+  let colQty = detectCol(ws, 'cantidad')     ?? 12;
 
-function resetResults() {
-  state.results = null;
-  resultsSection.classList.remove('visible');
-  unmatchedSection.style.display = 'none';
-  btnExportar.disabled = true;
-  summaryCards.innerHTML = '';
-  tableBody.innerHTML = '';
-}
-
-// ── Drop zone wiring ───────────────────────────────────────────────────────
-function wireDrop(dropEl, inputEl, slot) {
-  dropEl.addEventListener('click', () => inputEl.click());
-  dropEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') inputEl.click(); });
-  inputEl.addEventListener('change', e => {
-    if (e.target.files[0]) loadFile(e.target.files[0], slot);
-    e.target.value = '';
-  });
-  dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('drag-over'); });
-  dropEl.addEventListener('dragleave', () => dropEl.classList.remove('drag-over'));
-  dropEl.addEventListener('drop', e => {
-    e.preventDefault();
-    dropEl.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], slot);
-  });
-}
-
-wireDrop(dropPend, filePend, 'pend');
-wireDrop(dropPed,  filePed,  'ped');
-clearPend.addEventListener('click', e => { e.stopPropagation(); clearSlot('pend'); });
-clearPed.addEventListener ('click', e => { e.stopPropagation(); clearSlot('ped');  });
-
-// ── Core processing ────────────────────────────────────────────────────────
-function parsePendiente(buf) {
-  // Col 11 = DescArticulo, Col 12 = Cantidad
-  // Sheet may be named "Pendiente de remitir", "." or any name — we use first sheet as fallback
-  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false });
-  const ws = findSheet(wb, 'Pendiente de remitir', 'Pendiente de remitir ');
-  if (!ws) throw new Error('No se pudo leer el archivo de "Pendiente de remitir".');
-
-  // Detect column positions from header row
-  const endRow = maxRow(ws);
-  let colArticulo = 11, colCantidad = 12; // defaults
-  const h0 = cellStr(ws, 0, 0);
-  if (h0) {
-    // Scan header to find DescArticulo and Cantidad columns
-    for (let c = 0; c < 20; c++) {
-      const h = (cellStr(ws, 0, c) || '').toLowerCase();
-      if (h === 'descarticulo') colArticulo = c;
-      if (h === 'cantidad')     colCantidad  = c;
-    }
-  }
-
-  const pendMap = new Map();
-  for (let r = 1; r <= endRow; r++) {
-    const desc = cellStr(ws, r, colArticulo);
+  const map = new Map(); // articulo → qty
+  for (let r = 1; r <= end; r++) {
+    const desc = cellStr(ws, r, colArt);
     if (!desc) continue;
-    const qty  = cellNum(ws, r, colCantidad);
-    pendMap.set(desc, (pendMap.get(desc) || 0) + qty);
+    if (!desc.toUpperCase().startsWith(cropPrefix)) continue;
+    const qty = cellNum(ws, r, colQty);
+    map.set(desc, (map.get(desc) || 0) + qty);
   }
-  if (pendMap.size === 0) throw new Error('El archivo de "Pendiente de remitir" no tiene datos de artículos. Verificá que sea el archivo correcto.');
-  return pendMap;
+  return map;
 }
 
-function parsePedidosNK(buf) {
-  // Col 3 = Material desc. (includes grade), Col 4 = cantidad
-  // Sheet may be named "pedidos a nk", "." or any name — we use first sheet as fallback
-  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellFormula: false });
-  const ws = findSheet(wb, 'pedidos a nk', 'Pedidos a nk', 'Pedidos a NK');
-  if (!ws) throw new Error('No se pudo leer el archivo de "Pedidos a NK".');
+// ── Pedidos a NK parser ───────────────────────────────────────
+// Material desc. col + cantidad col; filter by SFCO/CRCO prefix
+function parsePedidos(buf, matPrefix, keyFn) {
+  const ws  = readFirstSheet(buf);
+  const end = maxRow(ws);
 
-  // Detect column positions from header row
-  const endRow = maxRow(ws);
-  let colMaterial = 3, colCantidad = 4; // defaults matching new format
-  const h0 = cellStr(ws, 0, 0);
-  if (h0) {
+  // Detect columns: "Material desc." and "cantidad" / "Sum of Order quantity"
+  let colMat = detectCol(ws, 'materialdesc') ?? null;
+  let colQty = detectCol(ws, 'cantidad', 'sumoforderquantity', 'qty') ?? null;
+
+  // Fallback: scan first row manually
+  if (colMat === null || colQty === null) {
     for (let c = 0; c < 10; c++) {
-      const h = (cellStr(ws, 0, c) || '').toLowerCase().replace(/[\s.]/g, '');
-      if (h.includes('materialdesc') || h === 'materialdesc') colMaterial = c;
-      if (h === 'cantidad' || h === 'sumoforderquantity' || h === 'qty') colCantidad = c;
+      const h = (cellStr(ws, 0, c) || '').toLowerCase();
+      if (h.includes('material desc')) colMat = c;
+      if (h === 'cantidad' || h.includes('order quantity')) colQty = c;
     }
   }
+  if (colMat === null) colMat = 5; // last-resort defaults for newer format
+  if (colQty === null) colQty = 6;
 
-  const pedMap = new Map(); // normalizedKey → { label, qty }
-  for (let r = 1; r <= endRow; r++) {
-    const matDesc = cellStr(ws, r, colMaterial);
-    if (!matDesc) continue;
-    const qty = cellNum(ws, r, colCantidad);
-    const key = normalizeKey(matDesc);
+  const map = new Map(); // normalizedKey → { label, qty }
+  for (let r = 1; r <= end; r++) {
+    const mat = cellStr(ws, r, colMat);
+    if (!mat) continue;
+    if (!mat.toUpperCase().startsWith(matPrefix)) continue;
+    const qty = cellNum(ws, r, colQty);
+    const key = keyFn(mat);
     if (!key) continue;
-    const existing = pedMap.get(key);
-    if (existing) {
-      existing.qty += qty;
-    } else {
-      pedMap.set(key, { label: matDesc, qty });
-    }
+    const ex = map.get(key);
+    if (ex) ex.qty += qty;
+    else    map.set(key, { label: mat, qty });
   }
-  if (pedMap.size === 0) throw new Error('El archivo de "Pedidos a NK" no tiene datos. Verificá que sea el archivo correcto.');
-  return pedMap;
+  return map;
 }
 
-async function calcular() {
-  clearError();
-  clearWarn();
-  showSpinner();
-  resetResults();
+// ── Core calculation ──────────────────────────────────────────
+function calculate(pendMap, pedByKey, keyFn) {
+  const rows      = [];
+  const unmatched = [];
 
-  await new Promise(r => setTimeout(r, 30));
+  pendMap.forEach((pendQty, articulo) => {
+    const key     = keyFn(articulo);
+    const nkEntry = key ? pedByKey.get(key) : null;
+    const pedQty  = nkEntry ? nkEntry.qty : 0;
+    rows.push({ articulo, pendiente: pendQty, pedidos: pedQty, posicion: pedQty - pendQty });
+    if (!nkEntry) unmatched.push(articulo);
+  });
 
-  try {
-    const pendMap  = parsePendiente(state.pendBuf);
-    const pedByKey = parsePedidosNK(state.pedBuf);  // Map: normalizedKey → { label, qty }
-
-    // Match each pendiente article to NK via normalized key
-    const rows = [];
-    const unmatched = [];
-
-    pendMap.forEach((pendQty, articulo) => {
-      const key     = normalizeKey(articulo);
-      const nkEntry = key ? pedByKey.get(key) : null;
-      const pedQty  = nkEntry ? nkEntry.qty : 0;
-      rows.push({ articulo, pendiente: pendQty, pedidos: pedQty, posicion: pedQty - pendQty });
-      if (!nkEntry) unmatched.push(articulo);
-    });
-
-    // Also show NK varieties not matched by any pendiente item (posicion = full qty)
-    const matchedKeys = new Set(rows.map(r => normalizeKey(r.articulo)).filter(Boolean));
-    pedByKey.forEach((v, key) => {
-      if (!matchedKeys.has(key)) {
-        rows.push({ articulo: v.label, pendiente: 0, pedidos: v.qty, posicion: v.qty });
-      }
-    });
-
-    rows.sort((a, b) => a.articulo.localeCompare(b.articulo, 'es'));
-
-    state.results = rows;
-    renderResults(rows, unmatched);
-
-    if (unmatched.length > 0) {
-      showWarn(`${unmatched.length} artículo(s) de "Pendiente de remitir" no pudieron relacionarse con ninguna variedad de NK. Ver detalle más abajo.`);
+  // NK varieties with no matching pendiente
+  const matched = new Set(rows.map(r => keyFn(r.articulo)).filter(Boolean));
+  pedByKey.forEach((v, key) => {
+    if (!matched.has(key)) {
+      rows.push({ articulo: v.label, pendiente: 0, pedidos: v.qty, posicion: v.qty });
     }
+  });
 
-  } catch (e) {
-    showError(e.message);
-  } finally {
-    hideSpinner();
-  }
+  rows.sort((a, b) => a.articulo.localeCompare(b.articulo, 'es'));
+  return { rows, unmatched };
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-function renderResults(rows, unmatched) {
+// ══════════════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════════════
+function renderResults(crop, rows, unmatched) {
   const totalPend = rows.reduce((s, r) => s + r.pendiente, 0);
   const totalPed  = rows.reduce((s, r) => s + r.pedidos,   0);
   const totalPos  = totalPed - totalPend;
 
-  summaryCards.innerHTML = `
+  document.getElementById('cards-' + crop).innerHTML = `
     <div class="card">
       <div class="label">Pendiente de remitir</div>
       <div class="value">${fmt(totalPend)}</div>
@@ -653,63 +558,173 @@ function renderResults(rows, unmatched) {
     </div>
   `;
 
-  tableBody.innerHTML = '';
+  const tbody = document.getElementById('tbody-' + crop);
+  tbody.innerHTML = '';
   rows.forEach(row => {
-    const cls      = row.posicion > 0 ? 'row-pos' : row.posicion < 0 ? 'row-neg' : 'row-zero';
-    const badgeCls = row.posicion > 0 ? 'pos'     : row.posicion < 0 ? 'neg'     : 'zero';
-    const tr = document.createElement('tr');
+    const cls  = row.posicion > 0 ? 'row-pos' : row.posicion < 0 ? 'row-neg' : 'row-zero';
+    const bdg  = row.posicion > 0 ? 'pos'     : row.posicion < 0 ? 'neg'     : 'zero';
+    const tr   = document.createElement('tr');
     tr.className = cls;
     tr.innerHTML = `
       <td>${escHtml(row.articulo)}</td>
       <td>${fmt(row.pendiente)}</td>
       <td>${fmt(row.pedidos)}</td>
-      <td><span class="badge ${badgeCls}">${fmt(row.posicion)}</span></td>
+      <td><span class="badge ${bdg}">${fmt(row.posicion)}</span></td>
     `;
-    tableBody.appendChild(tr);
+    tbody.appendChild(tr);
   });
 
-  resultsSection.classList.add('visible');
-  btnExportar.disabled = false;
+  document.getElementById('res-' + crop).classList.add('visible');
+  document.getElementById('btn-' + crop + '-export').disabled = false;
 
-  if (unmatched && unmatched.length > 0) {
-    unmatchedTitle.textContent = `⚠ ${unmatched.length} artículo(s) sin coincidencia en Pedidos a NK`;
-    unmatchedList.innerHTML = unmatched.map(a => `• ${escHtml(a)}`).join('<br>');
-    unmatchedSection.style.display = 'block';
+  const unmEl    = document.getElementById('unm-' + crop);
+  const unmTitle = document.getElementById('unm-' + crop + '-title');
+  const unmList  = document.getElementById('unm-' + crop + '-list');
+  if (unmatched.length > 0) {
+    unmTitle.textContent = `⚠ ${unmatched.length} artículo(s) sin coincidencia en Pedidos a NK`;
+    unmList.innerHTML    = unmatched.map(a => `• ${escHtml(a)}`).join('<br>');
+    unmEl.style.display  = 'block';
   } else {
-    unmatchedSection.style.display = 'none';
+    unmEl.style.display = 'none';
   }
 
-  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('res-' + crop).scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ── Export CSV ─────────────────────────────────────────────────────────────
-function exportCSV() {
-  if (!state.results) return;
+// ══════════════════════════════════════════════════════════════
+//  FILE MANAGEMENT (generic, per crop/slot)
+// ══════════════════════════════════════════════════════════════
+function loadFile(file, crop, slot) {
+  if (!file || !file.name.endsWith('.xlsx')) {
+    setBanner('err-' + crop, 'El archivo debe ser .xlsx');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    crops[crop][slot + 'Buf'] = e.target.result;
+    document.getElementById('lbl-' + crop + '-' + slot + '-main').textContent = '✓ Archivo cargado';
+    document.getElementById('lbl-' + crop + '-' + slot + '-name').textContent = file.name;
+    document.getElementById('dz-'  + crop + '-' + slot).classList.add('loaded');
+    document.getElementById('clr-' + crop + '-' + slot).style.display = 'inline-block';
+    updateCalcBtn(crop);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearSlot(crop, slot) {
+  crops[crop][slot + 'Buf'] = null;
+  document.getElementById('lbl-' + crop + '-' + slot + '-main').textContent = 'Arrastrá o hacé clic';
+  document.getElementById('lbl-' + crop + '-' + slot + '-name').textContent = '';
+  document.getElementById('dz-'  + crop + '-' + slot).classList.remove('loaded');
+  document.getElementById('clr-' + crop + '-' + slot).style.display = 'none';
+  document.getElementById('inp-' + crop + '-' + slot).value = '';
+  updateCalcBtn(crop);
+  resetResults(crop);
+}
+
+function updateCalcBtn(crop) {
+  document.getElementById('btn-' + crop + '-calc').disabled =
+    !(crops[crop].pendBuf && crops[crop].pedBuf);
+}
+
+function resetResults(crop) {
+  crops[crop].results = null;
+  document.getElementById('res-'   + crop).classList.remove('visible');
+  document.getElementById('btn-'   + crop + '-export').disabled = true;
+  document.getElementById('cards-' + crop).innerHTML = '';
+  document.getElementById('tbody-' + crop).innerHTML = '';
+  document.getElementById('unm-'   + crop).style.display = 'none';
+}
+
+function wireDZ(crop, slot) {
+  const dz  = document.getElementById('dz-'  + crop + '-' + slot);
+  const inp = document.getElementById('inp-' + crop + '-' + slot);
+  const clr = document.getElementById('clr-' + crop + '-' + slot);
+
+  dz.addEventListener('click',   () => inp.click());
+  dz.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') inp.click(); });
+  inp.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0], crop, slot); e.target.value=''; });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], crop, slot); });
+  clr.addEventListener('click', e => { e.stopPropagation(); clearSlot(crop, slot); });
+}
+
+wireDZ('girasol', 'pend');
+wireDZ('girasol', 'ped');
+wireDZ('maiz',    'pend');
+wireDZ('maiz',    'ped');
+
+// ══════════════════════════════════════════════════════════════
+//  CALCULATE (per crop)
+// ══════════════════════════════════════════════════════════════
+async function calcular(crop) {
+  setBanner('err-' + crop, null);
+  setBanner('wrn-' + crop, null);
+  showSpinner();
+  resetResults(crop);
+  await new Promise(r => setTimeout(r, 30));
+
+  try {
+    const isGirasol = crop === 'girasol';
+    const cropPrefix = isGirasol ? 'GIRASOL' : 'MAIZ';
+    const matPrefix  = isGirasol ? 'SFCO'    : 'CRCO';
+    const keyFn      = isGirasol ? keyGirasol : keyMaiz;
+
+    const pendMap  = parsePendiente(crops[crop].pendBuf, cropPrefix);
+    const pedByKey = parsePedidos(crops[crop].pedBuf, matPrefix, keyFn);
+
+    if (pendMap.size  === 0) throw new Error(`No se encontraron artículos de ${crop} en el archivo de "Pendiente de remitir". Verificá que sea el archivo correcto.`);
+    if (pedByKey.size === 0) throw new Error(`No se encontraron pedidos de ${crop} en el archivo de "Pedidos a NK". Verificá que sea el archivo correcto.`);
+
+    const { rows, unmatched } = calculate(pendMap, pedByKey, keyFn);
+    crops[crop].results = rows;
+    renderResults(crop, rows, unmatched);
+
+    if (unmatched.length > 0) {
+      setBanner('wrn-' + crop,
+        `${unmatched.length} artículo(s) del pendiente no pudieron relacionarse con ningún pedido a NK. Ver detalle más abajo.`);
+    }
+  } catch (e) {
+    setBanner('err-' + crop, e.message);
+  } finally {
+    hideSpinner();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  EXPORT CSV
+// ══════════════════════════════════════════════════════════════
+function exportCSV(crop) {
+  const rows = crops[crop].results;
+  if (!rows) return;
   const BOM   = '﻿';
   const lines = [
-    ['Híbrido', 'Pendiente de remitir', 'Pedidos a NK', 'Posición'].join(';'),
-    ...state.results.map(r => [r.articulo, r.pendiente, r.pedidos, r.posicion].join(';')),
+    ['Híbrido','Pendiente de remitir','Pedidos a NK','Posición'].join(';'),
+    ...rows.map(r => [r.articulo, r.pendiente, r.pedidos, r.posicion].join(';')),
   ];
   const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), { href: url, download: `posicion_girasol_${isoDate()}.csv` });
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url,
+    download: `posicion_${crop}_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.csv`,
+  });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-function isoDate() { return new Date().toISOString().slice(0, 10).replace(/-/g, ''); }
-
-// ── Button wiring ──────────────────────────────────────────────────────────
-btnCalcular.addEventListener('click', calcular);
-btnExportar.addEventListener('click', exportCSV);
-btnLimpiar.addEventListener('click', () => {
-  clearSlot('pend');
-  clearSlot('ped');
-  clearError();
-  clearWarn();
-  resetResults();
+// ══════════════════════════════════════════════════════════════
+//  BUTTON WIRING
+// ══════════════════════════════════════════════════════════════
+['girasol', 'maiz'].forEach(crop => {
+  document.getElementById('btn-' + crop + '-calc').addEventListener('click',   () => calcular(crop));
+  document.getElementById('btn-' + crop + '-export').addEventListener('click', () => exportCSV(crop));
+  document.getElementById('btn-' + crop + '-clear').addEventListener('click',  () => {
+    clearSlot(crop, 'pend');
+    clearSlot(crop, 'ped');
+    setBanner('err-' + crop, null);
+    setBanner('wrn-' + crop, null);
+  });
 });
 </script>
 </body>
