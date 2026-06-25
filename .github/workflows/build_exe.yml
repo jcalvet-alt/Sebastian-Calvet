@@ -5,6 +5,9 @@ on:
     branches: [ "claude/zealous-hawking-gczrip" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -22,9 +25,20 @@ jobs:
       - name: Build executable
         run: pyinstaller --onefile --windowed --name "PosicionNK" lanzador.py
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Create or update Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: PosicionNK-exe
-          path: dist/PosicionNK.exe
-          retention-days: 30
+          tag_name: latest
+          name: "PosicionNK — Última versión"
+          body: |
+            ## Posición de Híbridos NK
+
+            Doble clic en **PosicionNK.exe** para abrir la app.
+            No requiere instalación de ningún programa.
+
+            **Cómo usar:**
+            1. Descargá `PosicionNK.exe`
+            2. Doble clic → se abre la app en el navegador
+            3. Cargá los archivos Excel de Girasol o Maíz
+          files: dist/PosicionNK.exe
+          prerelease: false
