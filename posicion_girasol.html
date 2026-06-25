@@ -447,12 +447,18 @@ function keyGirasol(s) {
   return (num && grade) ? num[1] + 'G' + grade[1] : null;
 }
 
-// Maíz: NK/SY variety 3-digit code → "842"
-function keyMaiz(s) {
+// Maíz pendiente: extract variety + caliber → "842_R17"
+function keyMaizFromPendiente(s) {
   if (!s) return null;
-  const m = s.toUpperCase().match(/(?:NK|SY[N]?)[\s]?(\d{3})/);
-  return m ? m[1] : null;
+  const u = s.toUpperCase();
+  const mVar = u.match(/(?:NK|SYN?)\s*(\d{3})/);
+  const mCal = u.match(/\b(C17|C18|C22|R17|R18|R22|ESP|CEC)\b/);
+  if (mVar && mCal) return mVar[1] + '_' + mCal[1];
+  return mVar ? mVar[1] : null;
 }
+
+// Maíz SKU → {v: variety_num, c: caliber}
+const SKU_MAP_MAIZ = {"11137842":{"v":"800","c":"C22"},"11137845":{"v":"800","c":"R22"},"11137841":{"v":"800","c":"C18"},"11137843":{"v":"800","c":"R17"},"11137844":{"v":"800","c":"R18"},"11137840":{"v":"800","c":"C17"},"11137847":{"v":"800","c":"ESP"},"11137846":{"v":"800","c":"CEC"},"11457723":{"v":"825","c":"C22"},"11457726":{"v":"825","c":"R22"},"11416676":{"v":"825","c":"C22"},"11457725":{"v":"825","c":"R18"},"11416675":{"v":"825","c":"C18"},"11416678":{"v":"825","c":"R18"},"11258580":{"v":"835","c":"C22"},"11258583":{"v":"835","c":"R22"},"11258579":{"v":"835","c":"C18"},"11258581":{"v":"835","c":"R17"},"11258582":{"v":"835","c":"R18"},"11258228":{"v":"835","c":"C17"},"11258585":{"v":"835","c":"ESP"},"11258584":{"v":"835","c":"CEC"},"11129993":{"v":"842","c":"C22"},"11129996":{"v":"842","c":"R22"},"11129992":{"v":"842","c":"C18"},"11129994":{"v":"842","c":"R17"},"11129995":{"v":"842","c":"R18"},"11129991":{"v":"842","c":"C17"},"11129998":{"v":"842","c":"ESP"},"11129997":{"v":"842","c":"CEC"},"11390716":{"v":"842","c":"C22"},"11390719":{"v":"842","c":"R22"},"11390715":{"v":"842","c":"C18"},"11390717":{"v":"842","c":"R17"},"11390718":{"v":"842","c":"R18"},"11390714":{"v":"842","c":"C17"},"11390721":{"v":"842","c":"ESP"},"11390720":{"v":"842","c":"CEC"},"11246835":{"v":"855","c":"C22"},"11246838":{"v":"855","c":"R22"},"11246834":{"v":"855","c":"C18"},"11246836":{"v":"855","c":"R17"},"11246837":{"v":"855","c":"R18"},"11215725":{"v":"870","c":"C22"},"11215728":{"v":"870","c":"R22"},"11215724":{"v":"870","c":"C18"},"11215726":{"v":"870","c":"R17"},"11215727":{"v":"870","c":"R18"},"11215723":{"v":"870","c":"C17"},"11242285":{"v":"733","c":"C22"},"11242288":{"v":"733","c":"R22"},"11242284":{"v":"733","c":"C18"},"11242287":{"v":"733","c":"R18"},"11407264":{"v":"733","c":"C22"},"11407267":{"v":"733","c":"R22"},"11407263":{"v":"733","c":"C18"},"11407266":{"v":"733","c":"R18"},"10723056":{"v":"126","c":"C22"},"10723059":{"v":"126","c":"R22"},"10723055":{"v":"126","c":"C18"},"10723057":{"v":"126","c":"R17"},"10723058":{"v":"126","c":"R18"},"10723054":{"v":"126","c":"C17"},"10723061":{"v":"126","c":"ESP"},"10723060":{"v":"126","c":"CEC"},"10728371":{"v":"126","c":"C22"},"10728374":{"v":"126","c":"R22"},"10728370":{"v":"126","c":"C18"},"10728372":{"v":"126","c":"R17"},"10728373":{"v":"126","c":"R18"},"10728369":{"v":"126","c":"C17"},"10728376":{"v":"126","c":"ESP"},"10728375":{"v":"126","c":"CEC"},"11242277":{"v":"505","c":"C22"},"11242280":{"v":"505","c":"R22"},"11242276":{"v":"505","c":"C18"},"11242278":{"v":"505","c":"R17"},"11242279":{"v":"505","c":"R18"},"11242275":{"v":"505","c":"C17"},"11390734":{"v":"505","c":"C22"},"11390737":{"v":"505","c":"R22"},"11390733":{"v":"505","c":"C18"},"11390736":{"v":"505","c":"R18"},"10637294":{"v":"840","c":"C22"},"10637293":{"v":"840","c":"C18"},"10637295":{"v":"840","c":"R17"},"10640719":{"v":"840","c":"ESP"},"10892155":{"v":"840","c":"C22"},"10892158":{"v":"840","c":"R22"},"10892154":{"v":"840","c":"C18"},"10892156":{"v":"840","c":"R17"},"10892157":{"v":"840","c":"R18"},"10892153":{"v":"840","c":"C17"},"10892160":{"v":"840","c":"ESP"},"10892159":{"v":"840","c":"CEC"},"11009257":{"v":"897","c":"C22"},"11009620":{"v":"897","c":"R22"},"11009256":{"v":"897","c":"C18"},"11009619":{"v":"897","c":"R18"},"11009255":{"v":"897","c":"C17"},"10777065":{"v":"979","c":"C22"},"10777068":{"v":"979","c":"R22"},"10777064":{"v":"979","c":"C18"},"10777066":{"v":"979","c":"R17"},"10777067":{"v":"979","c":"R18"},"10777063":{"v":"979","c":"C17"},"10777080":{"v":"979","c":"ESP"},"10777079":{"v":"979","c":"CEC"}};
 
 // ── Pendiente de remitir parser ───────────────────────────────
 // Col 11 = DescArticulo, Col 12 = Cantidad (defaults; auto-detected from headers)
@@ -506,6 +512,39 @@ function parsePedidos(buf, matPrefix, keyFn) {
     const ex = map.get(key);
     if (ex) ex.qty += qty;
     else    map.set(key, { label: mat, qty });
+  }
+  return map;
+}
+
+// ── Pedidos a NK parser for Maíz (SKU-based via equivalence table) ───
+function parsePedidosMaiz(buf) {
+  const ws  = readFirstSheet(buf);
+  const end = maxRow(ws);
+
+  let colSku = null, colDesc = null, colQty = null;
+  for (let c = 0; c < 12; c++) {
+    const h = (cellStr(ws, 0, c) || '').toLowerCase().trim();
+    if (h === 'material')                           colSku  = c;
+    if (h.includes('material desc'))               colDesc = c;
+    if (h === 'cantidad' || h.includes('order quantity')) colQty = c;
+  }
+  if (colSku  === null) colSku  = 4;
+  if (colDesc === null) colDesc = 5;
+  if (colQty  === null) colQty  = 6;
+
+  const map = new Map();
+  for (let r = 1; r <= end; r++) {
+    const desc = cellStr(ws, r, colDesc);
+    if (!desc || !desc.toUpperCase().startsWith('CRCO')) continue;
+    const skuCell = ws[XLSX.utils.encode_cell({ r, c: colSku })];
+    const sku = skuCell ? String(skuCell.v ?? '').trim() : '';
+    const entry = SKU_MAP_MAIZ[sku];
+    if (!entry) continue;
+    const key = entry.v + '_' + entry.c;
+    const qty = cellNum(ws, r, colQty);
+    const ex  = map.get(key);
+    if (ex) ex.qty += qty;
+    else    map.set(key, { label: 'NK' + entry.v + ' ' + entry.c, qty });
   }
   return map;
 }
@@ -668,11 +707,12 @@ async function calcular(crop) {
   try {
     const isGirasol = crop === 'girasol';
     const cropPrefix = isGirasol ? 'GIRASOL' : 'MAIZ';
-    const matPrefix  = isGirasol ? 'SFCO'    : 'CRCO';
-    const keyFn      = isGirasol ? keyGirasol : keyMaiz;
 
     const pendMap  = parsePendiente(crops[crop].pendBuf, cropPrefix);
-    const pedByKey = parsePedidos(crops[crop].pedBuf, matPrefix, keyFn);
+    const pedByKey = isGirasol
+      ? parsePedidos(crops[crop].pedBuf, 'SFCO', keyGirasol)
+      : parsePedidosMaiz(crops[crop].pedBuf);
+    const keyFn    = isGirasol ? keyGirasol : keyMaizFromPendiente;
 
     if (pendMap.size  === 0) throw new Error(`No se encontraron artículos de ${crop} en el archivo de "Pendiente de remitir". Verificá que sea el archivo correcto.`);
     if (pedByKey.size === 0) throw new Error(`No se encontraron pedidos de ${crop} en el archivo de "Pedidos a NK". Verificá que sea el archivo correcto.`);
