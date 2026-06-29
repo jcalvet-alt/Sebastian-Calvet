@@ -1,44 +1,34 @@
 @echo off
-chcp 65001 >nul
 title Conteo de Hacienda - Dron
 
-echo.
-echo  Conteo de Hacienda - DJI Mavic 3M
-echo  ====================================
-echo.
-
-:: Ir a la carpeta donde está este .bat (por si se ejecuta desde otro lado)
+:: Pararse en la carpeta del .bat
 cd /d "%~dp0"
 
-:: ── Buscar Python: primero el lanzador "py", despues "python" ──────────
-set PYTHON=
-where py >nul 2>&1 && set PYTHON=py
-if "%PYTHON%"=="" (
-    where python >nul 2>&1 && set PYTHON=python
-)
-
-:: ── Si no hay Python, instalarlo con winget ────────────────────────────
-if "%PYTHON%"=="" (
-    echo Python no encontrado. Instalando...
-    winget install -e --id Python.Python.3.12 --silent --accept-source-agreements --accept-package-agreements
-    :: Refrescar variables de entorno
-    for /f "tokens=*" %%i in ('where /r "%LOCALAPPDATA%\Programs\Python" python.exe 2^>nul') do set PYTHON=%%i
-    if "%PYTHON%"=="" (
-        echo.
-        echo ERROR: No se pudo instalar Python automaticamente.
-        echo Por favor descargalo de https://www.python.org/downloads/
-        echo Marca "Add Python to PATH" y vuelve a ejecutar este archivo.
-        pause
-        exit /b 1
-    )
-)
-
-echo Python encontrado: %PYTHON%
+echo.
+echo Conteo de Hacienda - DJI Mavic 3M
+echo ====================================
 echo.
 
-:: ── Crear entorno virtual ──────────────────────────────────────────────
+:: Buscar Python (lanzador py o python directo)
+set "PYTHON="
+where py >nul 2>&1
+if not errorlevel 1 set "PYTHON=py"
+if "%PYTHON%"=="" (
+    where python >nul 2>&1
+    if not errorlevel 1 set "PYTHON=python"
+)
+if "%PYTHON%"=="" (
+    echo ERROR: Python no encontrado.
+    echo Instalalo desde https://www.python.org/downloads/
+    echo Marcando "Add Python to PATH" durante la instalacion.
+    pause
+    exit /b 1
+)
+echo Python: %PYTHON%
+
+:: Crear entorno virtual
 if not exist ".venv\Scripts\python.exe" (
-    echo [1/3] Preparando entorno...
+    echo Creando entorno virtual...
     %PYTHON% -m venv .venv
     if errorlevel 1 (
         echo ERROR al crear entorno virtual.
@@ -47,28 +37,33 @@ if not exist ".venv\Scripts\python.exe" (
     )
 )
 
-set VENV_PYTHON="%~dp0.venv\Scripts\python.exe"
-set VENV_PIP="%~dp0.venv\Scripts\pip.exe"
-set VENV_UVICORN="%~dp0.venv\Scripts\uvicorn.exe"
+set "VP=%~dp0.venv\Scripts\python.exe"
+set "VPIP=%~dp0.venv\Scripts\pip.exe"
+set "VUVI=%~dp0.venv\Scripts\uvicorn.exe"
 
-:: ── Instalar dependencias ──────────────────────────────────────────────
-%VENV_PYTHON% -c "import fastapi" >nul 2>&1
+echo Entorno virtual OK.
+
+:: Instalar dependencias
+"%VP%" -c "import fastapi" >nul 2>&1
 if errorlevel 1 (
-    echo [2/3] Instalando componentes (primera vez, puede tardar 3-5 minutos)...
-    %VENV_PIP% install -r backend\requirements.txt --quiet
+    echo Instalando dependencias (primera vez, 3-5 minutos)...
+    "%VP%" -m pip install --upgrade pip --quiet --no-progress-bar
+    "%VP%" -m pip install -r "%~dp0backend\requirements.txt" --quiet --no-progress-bar
     if errorlevel 1 (
-        echo ERROR al instalar componentes. Verificar conexion a internet.
+        echo.
+        echo ERROR al instalar dependencias.
+        echo Verifica tu conexion a internet e intentalo de nuevo.
         pause
         exit /b 1
     )
-    echo Componentes instalados.
+    echo Dependencias instaladas OK.
 )
 
-:: ── Descargar modelo ───────────────────────────────────────────────────
-if not exist "models\yolov8n_coco.onnx" (
-    if not exist "models\cattle.onnx" (
-        echo [3/3] Descargando modelo de deteccion (6MB, requiere internet)...
-        %VENV_PYTHON% scripts\download_placeholder.py
+:: Descargar modelo
+if not exist "%~dp0models\yolov8n_coco.onnx" (
+    if not exist "%~dp0models\cattle.onnx" (
+        echo Descargando modelo (6MB)...
+        "%VP%" "%~dp0scripts\download_placeholder.py"
         if errorlevel 1 (
             echo ERROR al descargar el modelo.
             pause
@@ -77,15 +72,14 @@ if not exist "models\yolov8n_coco.onnx" (
     )
 )
 
-:: ── Arrancar ───────────────────────────────────────────────────────────
 echo.
-echo Todo listo! Abriendo la aplicacion...
-echo Para cerrar: cerrar esta ventana.
+echo Todo listo. Abriendo en el navegador...
+echo Para cerrar la app: cerrar esta ventana.
 echo.
 
 start "" /b cmd /c "timeout /t 3 >nul && start http://localhost:8000"
 
-cd backend
-%VENV_UVICORN% main:app --port 8000
+cd /d "%~dp0backend"
+"%VUVI%" main:app --port 8000
 
 pause
