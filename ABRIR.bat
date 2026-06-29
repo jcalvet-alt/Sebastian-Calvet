@@ -1,80 +1,89 @@
 @echo off
-title Conteo de Hacienda - Dron
+echo ===========================================
+echo  Conteo de Hacienda - DJI Mavic 3M
+echo ===========================================
+echo.
+echo Carpeta: %~dp0
+echo.
+
 cd /d "%~dp0"
-echo. > "%~dp0ABRIR_LOG.txt"
-echo Iniciando... >> "%~dp0ABRIR_LOG.txt"
+
+echo Paso 1: Verificando carpeta...
+if not exist "%~dp0backend\main.py" (
+    echo.
+    echo ERROR: No encuentro los archivos de la app.
+    echo Asegurate de haber DESCOMPRIMIDO el ZIP antes de ejecutar.
+    echo No ejecutes este archivo desde adentro del ZIP.
+    echo.
+    pause
+    exit /b 1
+)
+echo Archivos OK.
 
 set "RUNTIME=%~dp0runtime"
 set "PY=%RUNTIME%\python\python.exe"
 set "UVI=%RUNTIME%\python\Scripts\uvicorn.exe"
 
+echo Paso 2: Verificando Python portable...
 if not exist "%PY%" (
-    echo [1/4] Descargando Python portable... >> "%~dp0ABRIR_LOG.txt"
-    echo [1/4] Descargando Python portable (12MB)...
+    echo Descargando Python portable (12MB)...
     if not exist "%RUNTIME%\python" mkdir "%RUNTIME%\python"
-    curl -L -o "%RUNTIME%\python-embed.zip" "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip" >> "%~dp0ABRIR_LOG.txt" 2>&1
+    curl -L --progress-bar -o "%RUNTIME%\py.zip" "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip"
     if errorlevel 1 (
-        echo ERROR curl. Intentando PowerShell... >> "%~dp0ABRIR_LOG.txt"
-        powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip' -OutFile '%RUNTIME%\python-embed.zip'" >> "%~dp0ABRIR_LOG.txt" 2>&1
+        echo Curl fallo. Intentando PowerShell...
+        powershell -Command "[Net.ServicePointManager]::SecurityProtocol='Tls12'; Invoke-WebRequest 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip' -OutFile '%RUNTIME%\py.zip'"
     )
-    echo Descomprimiendo... >> "%~dp0ABRIR_LOG.txt"
-    echo Descomprimiendo...
-    powershell -Command "Expand-Archive -Path '%RUNTIME%\python-embed.zip' -DestinationPath '%RUNTIME%\python' -Force" >> "%~dp0ABRIR_LOG.txt" 2>&1
-    del "%RUNTIME%\python-embed.zip"
-    (
-        echo python311.zip
-        echo .
-        echo .\Lib\site-packages
-        echo.
-        echo import site
-    ) > "%RUNTIME%\python\python311._pth"
-    echo Python portable OK >> "%~dp0ABRIR_LOG.txt"
+    echo Descomprimiendo Python...
+    powershell -Command "Expand-Archive '%RUNTIME%\py.zip' '%RUNTIME%\python' -Force"
+    del "%RUNTIME%\py.zip"
+    (echo python311.zip & echo . & echo .\Lib\site-packages & echo. & echo import site) > "%RUNTIME%\python\python311._pth"
 )
 
 if not exist "%PY%" (
-    echo ERROR: python.exe no encontrado en %PY% >> "%~dp0ABRIR_LOG.txt"
-    echo ERROR: python.exe no encontrado.
-    echo Revisa ABRIR_LOG.txt para mas detalles.
+    echo.
+    echo ERROR: No se pudo instalar Python portable.
+    echo Verifica tu conexion a internet.
     pause
     exit /b 1
 )
+echo Python OK: %PY%
 
-echo Python OK >> "%~dp0ABRIR_LOG.txt"
-
+echo Paso 3: Verificando pip...
 if not exist "%RUNTIME%\python\Scripts\pip.exe" (
-    echo [2/4] Instalando pip...
-    echo [2/4] Instalando pip... >> "%~dp0ABRIR_LOG.txt"
-    curl -L -o "%RUNTIME%\get-pip.py" "https://bootstrap.pypa.io/get-pip.py" >> "%~dp0ABRIR_LOG.txt" 2>&1
-    "%PY%" "%RUNTIME%\get-pip.py" --quiet --no-warn-script-location >> "%~dp0ABRIR_LOG.txt" 2>&1
+    echo Instalando pip...
+    curl -L -o "%RUNTIME%\get-pip.py" "https://bootstrap.pypa.io/get-pip.py"
+    if errorlevel 1 powershell -Command "[Net.ServicePointManager]::SecurityProtocol='Tls12'; Invoke-WebRequest 'https://bootstrap.pypa.io/get-pip.py' -OutFile '%RUNTIME%\get-pip.py'"
+    "%PY%" "%RUNTIME%\get-pip.py" --quiet --no-warn-script-location
     del "%RUNTIME%\get-pip.py"
-    echo pip OK >> "%~dp0ABRIR_LOG.txt"
 )
+echo pip OK.
 
-"%PY%" -c "import fastapi" >nul 2>&1
+echo Paso 4: Verificando dependencias...
+"%PY%" -c "import fastapi" 2>nul
 if errorlevel 1 (
-    echo [3/4] Instalando dependencias (3-5 minutos)...
-    echo [3/4] Instalando dependencias... >> "%~dp0ABRIR_LOG.txt"
-    "%PY%" -m pip install -r "%~dp0backend\requirements.txt" --quiet --no-progress-bar --no-warn-script-location >> "%~dp0ABRIR_LOG.txt" 2>&1
+    echo Instalando dependencias (3-5 minutos, por favor espera)...
+    "%PY%" -m pip install -r "%~dp0backend\requirements.txt" --no-progress-bar --no-warn-script-location
     if errorlevel 1 (
-        echo ERROR al instalar dependencias >> "%~dp0ABRIR_LOG.txt"
-        echo ERROR al instalar dependencias. Revisa ABRIR_LOG.txt
+        echo.
+        echo ERROR al instalar dependencias.
         pause
         exit /b 1
     )
-    echo Dependencias OK >> "%~dp0ABRIR_LOG.txt"
 )
+echo Dependencias OK.
 
+echo Paso 5: Verificando modelo...
 if not exist "%~dp0models\yolov8n_coco.onnx" (
     if not exist "%~dp0models\cattle.onnx" (
-        echo [4/4] Descargando modelo...
-        "%PY%" "%~dp0scripts\download_placeholder.py" >> "%~dp0ABRIR_LOG.txt" 2>&1
+        echo Descargando modelo (6MB)...
+        "%PY%" "%~dp0scripts\download_placeholder.py"
     )
 )
+echo Modelo OK.
 
-echo Arrancando servidor... >> "%~dp0ABRIR_LOG.txt"
 echo.
-echo Todo listo. Abriendo la app...
-echo Para cerrar: cerrar esta ventana.
+echo Todo listo. Abriendo navegador en 3 segundos...
+echo Para cerrar la app: cerrar esta ventana.
 echo.
 start "" /b cmd /c "timeout /t 3 >nul && start http://localhost:8000"
 cd /d "%~dp0backend"
