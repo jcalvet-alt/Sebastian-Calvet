@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conteo de Hacienda — Dron</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>🐄 Conteo de Hacienda</h1>
+  <span id="model-badge" class="badge"></span>
+</header>
+
+<main>
+
+  <!-- Panel izquierdo: controles -->
+  <aside id="controls">
+
+    <!-- Zona de carga -->
+    <section id="drop-zone" class="card">
+      <div id="drop-inner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021
+                   18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p>Arrastrá tu foto acá<br/><small>o hacé clic para seleccionar</small></p>
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/tiff,image/webp" />
+      </div>
+    </section>
+
+    <!-- Parámetros -->
+    <section class="card" id="params-card">
+      <h2>Parámetros</h2>
+
+      <label>
+        Confianza mínima: <strong id="conf-val">0.25</strong>
+        <input type="range" id="conf-slider" min="0.05" max="0.95" step="0.05" value="0.25" />
+      </label>
+
+      <label>
+        Tamaño tile:
+        <select id="tile-size">
+          <option value="320">320 px (más rápido)</option>
+          <option value="640" selected>640 px (recomendado)</option>
+          <option value="1280">1280 px (más lento)</option>
+        </select>
+      </label>
+
+      <label>
+        Solapamiento entre tiles: <strong id="overlap-val">20%</strong>
+        <input type="range" id="overlap-slider" min="0" max="0.5" step="0.05" value="0.2" />
+      </label>
+
+      <button id="detect-btn" disabled>Detectar</button>
+    </section>
+
+    <!-- Resultados -->
+    <section class="card" id="results-card" style="display:none">
+      <h2>Resultado</h2>
+      <div id="count-display">
+        <span id="count-number">0</span>
+        <span id="count-label">animales</span>
+      </div>
+
+      <div id="count-edit-row">
+        <label>Corregir total:
+          <input type="number" id="count-override" min="0" />
+        </label>
+        <button id="apply-override">Aplicar</button>
+      </div>
+
+      <div id="meta-info"></div>
+
+      <div id="correction-tools">
+        <h3>Corrección manual</h3>
+        <div id="tool-buttons">
+          <button id="tool-none"   class="tool-btn active" data-tool="none">Ver</button>
+          <button id="tool-add"    class="tool-btn"        data-tool="add">+ Agregar</button>
+          <button id="tool-remove" class="tool-btn"        data-tool="remove">− Quitar</button>
+        </div>
+        <small id="tool-hint"></small>
+      </div>
+
+      <button id="export-btn">Exportar JSON</button>
+    </section>
+
+  </aside>
+
+  <!-- Panel derecho: imagen -->
+  <section id="canvas-area">
+    <div id="canvas-wrapper">
+      <canvas id="main-canvas"></canvas>
+      <div id="placeholder-msg">
+        <p>Subí una foto para empezar</p>
+      </div>
+    </div>
+    <div id="progress-bar-wrap" style="display:none">
+      <div id="progress-bar"></div>
+      <span id="progress-label">Procesando…</span>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

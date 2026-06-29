@@ -1,0 +1,296 @@
+/* =====================================================================
+   Estilos — App de conteo de hacienda
+   ===================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f5f0;
+  --surface: #ffffff;
+  --border: #d8d8d0;
+  --accent: #2e7d32;
+  --accent-hover: #1b5e20;
+  --danger: #c62828;
+  --text: #1a1a1a;
+  --muted: #666;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.10);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Header ---- */
+header {
+  background: var(--accent);
+  color: #fff;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+header h1 { font-size: 1.3rem; font-weight: 700; }
+
+.badge {
+  font-size: .75rem;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.25);
+  color: #fff;
+}
+
+/* ---- Layout ---- */
+main {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+#controls {
+  width: 290px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+#canvas-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* ---- Card ---- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.card h2 { font-size: 1rem; margin-bottom: 12px; color: var(--accent); }
+.card h3 { font-size: .9rem; margin: 12px 0 8px; color: var(--muted); }
+
+/* ---- Drop zone ---- */
+#drop-zone {
+  cursor: pointer;
+  border: 2px dashed var(--border);
+  transition: border-color .2s, background .2s;
+  padding: 0;
+}
+#drop-zone.drag-over {
+  border-color: var(--accent);
+  background: #e8f5e9;
+}
+#drop-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  gap: 10px;
+  color: var(--muted);
+}
+#drop-inner svg { width: 40px; height: 40px; color: var(--accent); }
+#drop-inner p { text-align: center; font-size: .9rem; }
+#file-input { display: none; }
+
+/* ---- Params ---- */
+#params-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: .88rem;
+  margin-bottom: 14px;
+  color: var(--text);
+}
+#params-card label strong { color: var(--accent); }
+input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: .88rem;
+  background: var(--surface);
+}
+
+/* ---- Botones principales ---- */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 7px;
+  font-size: .9rem;
+  padding: 9px 14px;
+  transition: background .15s;
+}
+#detect-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 11px;
+}
+#detect-btn:hover:not(:disabled) { background: var(--accent-hover); }
+#detect-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+/* ---- Resultados ---- */
+#count-display {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+#count-number {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+#count-label { font-size: 1.1rem; color: var(--muted); }
+
+#count-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+#count-edit-row label { font-size: .82rem; flex: 1; }
+#count-override {
+  width: 70px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: .9rem;
+}
+#apply-override {
+  background: #e8f5e9;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 6px 10px;
+  font-size: .85rem;
+}
+#apply-override:hover { background: var(--accent); color: #fff; }
+
+#meta-info {
+  font-size: .78rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+/* ---- Herramientas de corrección ---- */
+#tool-buttons { display: flex; gap: 6px; margin-bottom: 6px; }
+.tool-btn {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: .82rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.tool-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+#tool-hint { font-size: .78rem; color: var(--muted); }
+
+#export-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: #f5f5f0;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: .85rem;
+}
+#export-btn:hover { background: #e0e0e0; }
+
+/* ---- Canvas area ---- */
+#canvas-wrapper {
+  flex: 1;
+  position: relative;
+  background: #1a1a1a;
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+#main-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: none;
+  cursor: crosshair;
+}
+
+#placeholder-msg {
+  color: #555;
+  text-align: center;
+  font-size: 1rem;
+}
+
+/* ---- Progress ---- */
+#progress-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+#progress-bar {
+  flex: 1;
+  height: 8px;
+  background: #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+#progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -40%;
+  width: 40%;
+  height: 100%;
+  background: var(--accent);
+  animation: slide 1s linear infinite;
+}
+@keyframes slide {
+  to { left: 100%; }
+}
+#progress-label { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+
+/* ---- Toast ---- */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #333;
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: .9rem;
+  transition: transform .3s;
+  pointer-events: none;
+  z-index: 100;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--danger); }
+
+/* ---- Responsive ---- */
+@media (max-width: 700px) {
+  main { flex-direction: column; }
+  #controls { width: 100%; }
+}
