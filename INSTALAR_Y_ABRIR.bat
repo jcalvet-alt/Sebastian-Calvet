@@ -1,106 +1,91 @@
 @echo off
 chcp 65001 >nul
-title Instalador — Conteo de Hacienda
+title Conteo de Hacienda - Dron
 
 echo.
-echo  ╔══════════════════════════════════════════════╗
-echo  ║   Conteo de Hacienda - DJI Mavic 3M         ║
-echo  ║   Instalador automático                      ║
-echo  ╚══════════════════════════════════════════════╝
+echo  Conteo de Hacienda - DJI Mavic 3M
+echo  ====================================
 echo.
 
-:: ── 1. Verificar si Python ya está instalado ──────────────────────────
-python --version >nul 2>&1
-if not errorlevel 1 goto :python_ok
+:: Ir a la carpeta donde está este .bat (por si se ejecuta desde otro lado)
+cd /d "%~dp0"
 
-:: ── 2. Intentar instalar Python con winget (Windows 10/11) ────────────
-echo  Python no encontrado. Instalando automáticamente...
-echo  (Requiere conexión a internet)
-echo.
+:: ── Buscar Python: primero el lanzador "py", despues "python" ──────────
+set PYTHON=
+where py >nul 2>&1 && set PYTHON=py
+if "%PYTHON%"=="" (
+    where python >nul 2>&1 && set PYTHON=python
+)
 
-winget --version >nul 2>&1
-if not errorlevel 1 (
-    echo  Instalando Python 3.12 con winget...
+:: ── Si no hay Python, instalarlo con winget ────────────────────────────
+if "%PYTHON%"=="" (
+    echo Python no encontrado. Instalando...
     winget install -e --id Python.Python.3.12 --silent --accept-source-agreements --accept-package-agreements
-    if errorlevel 1 goto :instalar_manual
-    :: Refrescar PATH para que Python sea visible en esta sesión
-    set "PATH=%LOCALAPPDATA%\Programs\Python\Python312\;%LOCALAPPDATA%\Programs\Python\Python312\Scripts\;%PATH%"
-    set "PATH=%APPDATA%\Python\Python312\Scripts\;%PATH%"
-    python --version >nul 2>&1
-    if not errorlevel 1 goto :python_ok
-)
-
-:instalar_manual
-:: ── 3. Fallback: descargar el instalador de Python directamente ────────
-echo  Descargando instalador de Python desde python.org...
-curl -L -o "%TEMP%\python_installer.exe" "https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe"
-if errorlevel 1 (
-    echo.
-    echo  ERROR: No se pudo descargar Python.
-    echo  Por favor instalalo manualmente desde:
-    echo     https://www.python.org/downloads/
-    echo  Marcá "Add Python to PATH" y volvé a ejecutar este archivo.
-    pause
-    exit /b 1
-)
-echo  Instalando Python (esto abre una ventana de instalación)...
-"%TEMP%\python_installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0
-:: Actualizar PATH
-set "PATH=%LOCALAPPDATA%\Programs\Python\Python312\;%LOCALAPPDATA%\Programs\Python\Python312\Scripts\;%PATH%"
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo  ERROR: La instalación de Python falló.
-    echo  Intentá instalar Python manualmente desde https://www.python.org/downloads/
-    pause
-    exit /b 1
-)
-
-:python_ok
-echo  Python encontrado.
-echo.
-
-:: ── 4. Crear entorno virtual ───────────────────────────────────────────
-if not exist ".venv" (
-    echo  [1/3] Preparando entorno de Python...
-    python -m venv .venv
-)
-call .venv\Scripts\activate.bat
-
-:: ── 5. Instalar dependencias ───────────────────────────────────────────
-if not exist ".venv\Lib\site-packages\fastapi" (
-    echo  [2/3] Instalando componentes (primera vez, 2-5 minutos)...
-    pip install -r backend\requirements.txt --quiet
-    if errorlevel 1 (
+    :: Refrescar variables de entorno
+    for /f "tokens=*" %%i in ('where /r "%LOCALAPPDATA%\Programs\Python" python.exe 2^>nul') do set PYTHON=%%i
+    if "%PYTHON%"=="" (
         echo.
-        echo  ERROR al instalar componentes. Verificá tu conexión a internet.
+        echo ERROR: No se pudo instalar Python automaticamente.
+        echo Por favor descargalo de https://www.python.org/downloads/
+        echo Marca "Add Python to PATH" y vuelve a ejecutar este archivo.
         pause
         exit /b 1
     )
 )
 
-:: ── 6. Descargar modelo ────────────────────────────────────────────────
+echo Python encontrado: %PYTHON%
+echo.
+
+:: ── Crear entorno virtual ──────────────────────────────────────────────
+if not exist ".venv\Scripts\python.exe" (
+    echo [1/3] Preparando entorno...
+    %PYTHON% -m venv .venv
+    if errorlevel 1 (
+        echo ERROR al crear entorno virtual.
+        pause
+        exit /b 1
+    )
+)
+
+set VENV_PYTHON="%~dp0.venv\Scripts\python.exe"
+set VENV_PIP="%~dp0.venv\Scripts\pip.exe"
+set VENV_UVICORN="%~dp0.venv\Scripts\uvicorn.exe"
+
+:: ── Instalar dependencias ──────────────────────────────────────────────
+%VENV_PYTHON% -c "import fastapi" >nul 2>&1
+if errorlevel 1 (
+    echo [2/3] Instalando componentes (primera vez, puede tardar 3-5 minutos)...
+    %VENV_PIP% install -r backend\requirements.txt --quiet
+    if errorlevel 1 (
+        echo ERROR al instalar componentes. Verificar conexion a internet.
+        pause
+        exit /b 1
+    )
+    echo Componentes instalados.
+)
+
+:: ── Descargar modelo ───────────────────────────────────────────────────
 if not exist "models\yolov8n_coco.onnx" (
     if not exist "models\cattle.onnx" (
-        echo  [3/3] Descargando modelo de detección (~6MB)...
-        python scripts\download_placeholder.py
+        echo [3/3] Descargando modelo de deteccion (6MB, requiere internet)...
+        %VENV_PYTHON% scripts\download_placeholder.py
         if errorlevel 1 (
-            echo  ERROR al descargar el modelo.
+            echo ERROR al descargar el modelo.
             pause
             exit /b 1
         )
     )
 )
 
-:: ── 7. Arrancar ────────────────────────────────────────────────────────
+:: ── Arrancar ───────────────────────────────────────────────────────────
 echo.
-echo  ✓ Todo listo!
-echo  Abriendo la aplicación en el navegador...
-echo  Para cerrar la app: cerrá esta ventana.
+echo Todo listo! Abriendo la aplicacion...
+echo Para cerrar: cerrar esta ventana.
 echo.
 
 start "" /b cmd /c "timeout /t 3 >nul && start http://localhost:8000"
+
 cd backend
-uvicorn main:app --port 8000
+%VENV_UVICORN% main:app --port 8000
 
 pause
