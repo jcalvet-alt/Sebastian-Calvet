@@ -1,42 +1,88 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from './supabase'
 import GastoForm from './components/GastoForm'
 import GastoTable from './components/GastoTable'
 import Resumen from './components/Resumen'
 import './index.css'
 
-const STORAGE_KEY = 'dos-agro-gastos'
+function toLocal(g) {
+  return {
+    id: g.id,
+    actividad: g.actividad,
+    concepto: g.concepto,
+    monto: g.monto,
+    vencimiento: g.vencimiento,
+    formaPago: g.forma_pago,
+    estado: g.estado,
+    montoParcial: g.monto_parcial,
+  }
+}
+
+function toRemote(g) {
+  return {
+    actividad: g.actividad,
+    concepto: g.concepto,
+    monto: g.monto,
+    vencimiento: g.vencimiento || null,
+    forma_pago: g.formaPago,
+    estado: g.estado,
+    monto_parcial: g.montoParcial || null,
+  }
+}
 
 export default function App() {
-  const [gastos, setGastos] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []
-    } catch {
-      return []
-    }
-  })
+  const [gastos, setGastos] = useState([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState(null)
   const [filtroActividad, setFiltroActividad] = useState('todas')
   const [filtroEstado, setFiltroEstado] = useState('todos')
   const [modalOpen, setModalOpen] = useState(false)
   const [editando, setEditando] = useState(null)
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos))
-  }, [gastos])
+  const cargarGastos = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('gastos')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) { setError(error.message); return }
+    setGastos(data.map(toLocal))
+    setCargando(false)
+  }, [])
 
-  function agregarGasto(gasto) {
+  useEffect(() => {
+    cargarGastos()
+
+    const channel = supabase
+      .channel('gastos-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gastos' }, cargarGastos)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [cargarGastos])
+
+  async function agregarGasto(gasto) {
     if (editando !== null) {
-      setGastos(prev => prev.map(g => g.id === editando ? { ...gasto, id: editando } : g))
+      const { error } = await supabase
+        .from('gastos')
+        .update(toRemote(gasto))
+        .eq('id', editando)
+      if (error) { alert('Error al guardar: ' + error.message); return }
       setEditando(null)
     } else {
-      setGastos(prev => [...prev, { ...gasto, id: Date.now() }])
+      const { error } = await supabase
+        .from('gastos')
+        .insert(toRemote({ ...gasto, estado: 'impago' }))
+      if (error) { alert('Error al guardar: ' + error.message); return }
     }
     setModalOpen(false)
+    cargarGastos()
   }
 
-  function eliminarGasto(id) {
-    if (confirm('¿Eliminar este gasto?')) {
-      setGastos(prev => prev.filter(g => g.id !== id))
-    }
+  async function eliminarGasto(id) {
+    if (!confirm('¿Eliminar este gasto?')) return
+    const { error } = await supabase.from('gastos').delete().eq('id', id)
+    if (error) { alert('Error al eliminar: ' + error.message); return }
+    cargarGastos()
   }
 
   function editarGasto(gasto) {
@@ -44,10 +90,11 @@ export default function App() {
     setModalOpen(true)
   }
 
-  function actualizarEstado(id, nuevoEstado, montoParcial) {
-    setGastos(prev => prev.map(g =>
-      g.id === id ? { ...g, estado: nuevoEstado, montoParcial: montoParcial ?? g.montoParcial } : g
-    ))
+  async function actualizarEstado(id, nuevoEstado, montoParcial) {
+    const update = { estado: nuevoEstado, monto_parcial: montoParcial ?? null }
+    const { error } = await supabase.from('gastos').update(update).eq('id', id)
+    if (error) { alert('Error: ' + error.message); return }
+    cargarGastos()
   }
 
   const gastosFiltrados = gastos.filter(g => {
@@ -76,45 +123,59 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        <Resumen gastos={gastos} />
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+            Error de conexión: {error}
+          </div>
+        )}
 
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-600">Actividad:</label>
-            <select
-              value={filtroActividad}
-              onChange={e => setFiltroActividad(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="todas">Todas</option>
-              <option value="ganaderia">Ganadería</option>
-              <option value="agricultura">Agricultura</option>
-            </select>
+        {cargando ? (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-sm">Cargando gastos...</p>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-600">Estado:</label>
-            <select
-              value={filtroEstado}
-              onChange={e => setFiltroEstado(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="todos">Todos</option>
-              <option value="impago">Impago</option>
-              <option value="parcial">Pago parcial</option>
-              <option value="pagado">Pagado</option>
-            </select>
-          </div>
-          <div className="ml-auto text-sm text-gray-500">
-            {gastosFiltrados.length} gasto{gastosFiltrados.length !== 1 ? 's' : ''}
-          </div>
-        </div>
+        ) : (
+          <>
+            <Resumen gastos={gastos} />
 
-        <GastoTable
-          gastos={gastosFiltrados}
-          onEliminar={eliminarGasto}
-          onEditar={editarGasto}
-          onActualizarEstado={actualizarEstado}
-        />
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600">Actividad:</label>
+                <select
+                  value={filtroActividad}
+                  onChange={e => setFiltroActividad(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="todas">Todas</option>
+                  <option value="ganaderia">Ganadería</option>
+                  <option value="agricultura">Agricultura</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600">Estado:</label>
+                <select
+                  value={filtroEstado}
+                  onChange={e => setFiltroEstado(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="impago">Impago</option>
+                  <option value="parcial">Pago parcial</option>
+                  <option value="pagado">Pagado</option>
+                </select>
+              </div>
+              <div className="ml-auto text-sm text-gray-500">
+                {gastosFiltrados.length} gasto{gastosFiltrados.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            <GastoTable
+              gastos={gastosFiltrados}
+              onEliminar={eliminarGasto}
+              onEditar={editarGasto}
+              onActualizarEstado={actualizarEstado}
+            />
+          </>
+        )}
       </main>
 
       {modalOpen && (
