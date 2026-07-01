@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase'
+import * as XLSX from 'xlsx'
 import GastoForm from './components/GastoForm'
 import GastoTable from './components/GastoTable'
 import Resumen from './components/Resumen'
@@ -90,6 +91,24 @@ export default function App() {
     setModalOpen(true)
   }
 
+  function exportarExcel() {
+    const filas = gastos.map(g => ({
+      'Actividad': g.actividad === 'ganaderia' ? 'Ganadería' : 'Agricultura',
+      'Concepto': g.concepto,
+      'Monto ($)': g.monto,
+      'Vencimiento': g.vencimiento || '',
+      'Forma de pago': g.formaPago,
+      'Estado': g.estado === 'pagado' ? 'Pagado' : g.estado === 'parcial' ? 'Pago parcial' : 'Impago',
+      'Monto pagado ($)': g.estado === 'parcial' ? g.montoParcial : g.estado === 'pagado' ? g.monto : 0,
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    ws['!cols'] = [16, 30, 14, 14, 16, 14, 16].map(w => ({ wch: w }))
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Gastos')
+    const fecha = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(wb, `DosAgro_Gastos_${fecha}.xlsx`)
+  }
+
   async function actualizarEstado(id, nuevoEstado, montoParcial) {
     const update = { estado: nuevoEstado, monto_parcial: montoParcial ?? null }
     const { error } = await supabase.from('gastos').update(update).eq('id', id)
@@ -113,12 +132,21 @@ export default function App() {
             <h1 className="text-xl font-bold tracking-tight">Dos Agro</h1>
             <p className="text-green-200 text-sm">Registro de Gastos</p>
           </div>
-          <button
-            onClick={() => { setEditando(null); setModalOpen(true) }}
-            className="bg-white text-green-800 font-semibold px-4 py-2 rounded-lg shadow hover:bg-green-50 transition text-sm"
-          >
-            + Nuevo gasto
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={exportarExcel}
+              className="bg-green-700 border border-green-500 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-green-600 transition text-sm"
+              title="Exportar a Excel"
+            >
+              ↓ Excel
+            </button>
+            <button
+              onClick={() => { setEditando(null); setModalOpen(true) }}
+              className="bg-white text-green-800 font-semibold px-4 py-2 rounded-lg shadow hover:bg-green-50 transition text-sm"
+            >
+              + Nuevo gasto
+            </button>
+          </div>
         </div>
       </header>
 
