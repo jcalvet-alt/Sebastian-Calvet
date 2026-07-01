@@ -1,13 +1,53 @@
 {
   "name": "dos-agro-gastos",
+  "productName": "Dos Agro Gastos",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && NODE_ENV=development electron .\"",
+    "build:win": "vite build && electron-builder --win --x64",
+    "build:linux": "vite build && electron-builder --linux --x64",
+    "build:mac": "vite build && electron-builder --mac --x64"
+  },
+  "build": {
+    "appId": "com.dosagro.gastos",
+    "productName": "Dos Agro Gastos",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/icon.png"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Dos Agro Gastos"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Finance"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.finance"
+    }
   },
   "dependencies": {
     "react": "^19.2.7",
@@ -18,8 +58,12 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.3",
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.3.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "wait-on": "^9.0.10"
   }
 }
