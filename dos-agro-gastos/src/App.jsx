@@ -16,6 +16,8 @@ function toLocal(g) {
     formaPago: g.forma_pago,
     estado: g.estado,
     montoParcial: g.monto_parcial,
+    moneda: g.moneda ?? 'ARS',
+    tipoCambio: g.tipo_cambio ?? null,
   }
 }
 
@@ -28,6 +30,8 @@ function toRemote(g) {
     forma_pago: g.formaPago,
     estado: g.estado,
     monto_parcial: g.montoParcial || null,
+    moneda: g.moneda ?? 'ARS',
+    tipo_cambio: g.tipoCambio ?? null,
   }
 }
 
@@ -92,17 +96,25 @@ export default function App() {
   }
 
   function exportarExcel() {
-    const filas = gastos.map(g => ({
-      'Actividad': g.actividad === 'ganaderia' ? 'Ganadería' : 'Agricultura',
-      'Concepto': g.concepto,
-      'Monto ($)': g.monto,
-      'Vencimiento': g.vencimiento || '',
-      'Forma de pago': g.formaPago,
-      'Estado': g.estado === 'pagado' ? 'Pagado' : g.estado === 'parcial' ? 'Pago parcial' : 'Impago',
-      'Monto pagado ($)': g.estado === 'parcial' ? g.montoParcial : g.estado === 'pagado' ? g.monto : 0,
-    }))
+    const filas = gastos.map(g => {
+      const enUSD = g.moneda === 'USD'
+        ? g.monto
+        : (g.tipoCambio ? g.monto / g.tipoCambio : null)
+      return {
+        'Actividad': g.actividad === 'ganaderia' ? 'Ganadería' : 'Agricultura',
+        'Concepto': g.concepto,
+        'Moneda': g.moneda,
+        'Monto': g.monto,
+        'TC BNA': g.tipoCambio ?? '',
+        'Monto USD': enUSD ? parseFloat(enUSD.toFixed(2)) : '',
+        'Vencimiento': g.vencimiento || '',
+        'Forma de pago': g.formaPago,
+        'Estado': g.estado === 'pagado' ? 'Pagado' : g.estado === 'parcial' ? 'Pago parcial' : 'Impago',
+        'Monto pagado': g.estado === 'parcial' ? g.montoParcial : g.estado === 'pagado' ? g.monto : 0,
+      }
+    })
     const ws = XLSX.utils.json_to_sheet(filas)
-    ws['!cols'] = [16, 30, 14, 14, 16, 14, 16].map(w => ({ wch: w }))
+    ws['!cols'] = [16, 30, 10, 14, 12, 12, 14, 16, 14, 14].map(w => ({ wch: w }))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Gastos')
     const fecha = new Date().toISOString().slice(0, 10)

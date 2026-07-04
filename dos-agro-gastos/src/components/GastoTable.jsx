@@ -12,8 +12,12 @@ const LABEL = {
   impago: 'Impago',
 }
 
-function fmt(n) {
+function fmtARS(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+}
+
+function fmtUSD(n) {
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n)
 }
 
 function fmtFecha(f) {
@@ -22,15 +26,32 @@ function fmtFecha(f) {
   return `${d}/${m}/${y}`
 }
 
+function MontoCell({ g }) {
+  const enUSD = g.moneda === 'USD'
+    ? g.monto
+    : (g.tipoCambio ? g.monto / g.tipoCambio : null)
+
+  return (
+    <div className="text-right">
+      <div className="font-mono text-gray-800 font-medium">
+        {g.moneda === 'USD' ? fmtUSD(g.monto) : fmtARS(g.monto)}
+      </div>
+      {enUSD !== null && g.moneda === 'ARS' && (
+        <div className="text-xs text-blue-500 font-mono">≈ {fmtUSD(enUSD)}</div>
+      )}
+      {g.tipoCambio && (
+        <div className="text-xs text-gray-400">TC ${g.tipoCambio.toLocaleString('es-AR')}</div>
+      )}
+    </div>
+  )
+}
+
 function EstadoCell({ gasto, onActualizarEstado }) {
   const [open, setOpen] = useState(false)
   const [montoParcialInput, setMontoParcialInput] = useState('')
 
   function aplicar(estado) {
-    if (estado === 'parcial') {
-      setOpen('parcial')
-      return
-    }
+    if (estado === 'parcial') { setOpen('parcial'); return }
     onActualizarEstado(gasto.id, estado, null)
     setOpen(false)
   }
@@ -50,7 +71,7 @@ function EstadoCell({ gasto, onActualizarEstado }) {
         className={`px-2 py-1 rounded-full text-xs font-semibold ${BADGE[gasto.estado]} cursor-pointer hover:opacity-80 transition whitespace-nowrap`}
       >
         {LABEL[gasto.estado]}
-        {gasto.estado === 'parcial' && gasto.montoParcial ? ` ${fmt(gasto.montoParcial)}` : ''}
+        {gasto.estado === 'parcial' && gasto.montoParcial ? ` ${fmtARS(gasto.montoParcial)}` : ''}
       </button>
 
       {open === 'menu' && (
@@ -69,7 +90,7 @@ function EstadoCell({ gasto, onActualizarEstado }) {
 
       {open === 'parcial' && (
         <div className="absolute z-20 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 right-0 min-w-44">
-          <p className="text-xs text-gray-600 mb-2 font-medium">Monto pagado ($)</p>
+          <p className="text-xs text-gray-600 mb-2 font-medium">Monto pagado</p>
           <input
             type="number"
             autoFocus
@@ -126,7 +147,7 @@ export default function GastoTable({ gastos, onEliminar, onEditar, onActualizarE
                   </span>
                 </td>
                 <td className="px-4 py-3 font-medium text-gray-800">{g.concepto}</td>
-                <td className="px-4 py-3 text-right font-mono text-gray-700">{fmt(g.monto)}</td>
+                <td className="px-4 py-3"><MontoCell g={g} /></td>
                 <td className="px-4 py-3 text-center text-gray-600">{fmtFecha(g.vencimiento)}</td>
                 <td className="px-4 py-3 text-gray-600">{g.formaPago}</td>
                 <td className="px-4 py-3 text-center">
@@ -157,7 +178,7 @@ export default function GastoTable({ gastos, onEliminar, onEditar, onActualizarE
             </div>
             <p className="font-semibold text-gray-800">{g.concepto}</p>
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-gray-700 font-mono">{fmt(g.monto)}</span>
+              <MontoCell g={g} />
               <EstadoCell gasto={g} onActualizarEstado={onActualizarEstado} />
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const FORMAS_PAGO = ['Efectivo', 'Transferencia', 'Cheque', 'Tarjeta', 'Cuenta corriente', 'Otro']
 
@@ -10,6 +10,18 @@ const vacio = {
   formaPago: 'Transferencia',
   estado: 'impago',
   montoParcial: '',
+  moneda: 'ARS',
+  tipoCambio: '',
+}
+
+async function fetchTC() {
+  try {
+    const res = await fetch('https://api.bluelytics.com.ar/v2/latest')
+    const data = await res.json()
+    return data.oficial.value_sell
+  } catch {
+    return null
+  }
 }
 
 export default function GastoForm({ onGuardar, onCancelar, inicial }) {
@@ -17,7 +29,20 @@ export default function GastoForm({ onGuardar, onCancelar, inicial }) {
     ...inicial,
     monto: inicial.monto?.toString() ?? '',
     montoParcial: inicial.montoParcial?.toString() ?? '',
+    moneda: inicial.moneda ?? 'ARS',
+    tipoCambio: inicial.tipoCambio?.toString() ?? '',
   } : { ...vacio })
+  const [cargandoTC, setCargandoTC] = useState(false)
+
+  useEffect(() => {
+    if (!inicial && form.moneda === 'ARS' && !form.tipoCambio) {
+      setCargandoTC(true)
+      fetchTC().then(tc => {
+        if (tc) setForm(prev => ({ ...prev, tipoCambio: tc.toString() }))
+        setCargandoTC(false)
+      })
+    }
+  }, [])
 
   function set(k, v) {
     setForm(prev => ({ ...prev, [k]: v }))
@@ -30,8 +55,15 @@ export default function GastoForm({ onGuardar, onCancelar, inicial }) {
       ...form,
       monto: parseFloat(form.monto),
       montoParcial: form.montoParcial ? parseFloat(form.montoParcial) : null,
+      tipoCambio: form.tipoCambio ? parseFloat(form.tipoCambio) : null,
     })
   }
+
+  const montoUSD = form.monto && form.tipoCambio
+    ? (form.moneda === 'ARS'
+        ? (parseFloat(form.monto) / parseFloat(form.tipoCambio)).toFixed(2)
+        : parseFloat(form.monto).toFixed(2))
+    : null
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -48,7 +80,7 @@ export default function GastoForm({ onGuardar, onCancelar, inicial }) {
                 onChange={() => set('actividad', act)}
                 className="accent-green-700"
               />
-              <span className="capitalize text-sm">{act === 'ganaderia' ? 'Ganadería' : 'Agricultura'}</span>
+              <span className="text-sm">{act === 'ganaderia' ? 'Ganadería' : 'Agricultura'}</span>
             </label>
           ))}
         </div>
@@ -66,9 +98,18 @@ export default function GastoForm({ onGuardar, onCancelar, inicial }) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Monto ($)</label>
+      {/* Moneda + Monto */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Moneda y Monto</label>
+        <div className="flex gap-2">
+          <select
+            value={form.moneda}
+            onChange={e => set('moneda', e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-24"
+          >
+            <option value="ARS">$ ARS</option>
+            <option value="USD">U$D</option>
+          </select>
           <input
             type="number"
             value={form.monto}
@@ -77,18 +118,55 @@ export default function GastoForm({ onGuardar, onCancelar, inicial }) {
             min="0"
             step="0.01"
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
+      </div>
+
+      {/* Tipo de cambio */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          TC BNA venta (ARS/USD)
+          {cargandoTC && <span className="ml-2 text-xs text-gray-400">cargando...</span>}
+        </label>
+        <div className="flex gap-2 items-center">
           <input
-            type="date"
-            value={form.vencimiento}
-            onChange={e => set('vencimiento', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            type="number"
+            value={form.tipoCambio}
+            onChange={e => set('tipoCambio', e.target.value)}
+            placeholder="Ej: 1250.00"
+            min="0"
+            step="0.01"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
+          <button
+            type="button"
+            onClick={async () => {
+              setCargandoTC(true)
+              const tc = await fetchTC()
+              if (tc) set('tipoCambio', tc.toString())
+              setCargandoTC(false)
+            }}
+            className="text-xs border border-gray-300 rounded-lg px-2 py-2 hover:bg-gray-50 whitespace-nowrap"
+          >
+            ↻ BNA
+          </button>
         </div>
+        {montoUSD && (
+          <p className="text-xs text-blue-600 mt-1 font-medium">
+            ≈ U$D {montoUSD}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
+        <input
+          type="date"
+          value={form.vencimiento}
+          onChange={e => set('vencimiento', e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+        />
       </div>
 
       <div>
