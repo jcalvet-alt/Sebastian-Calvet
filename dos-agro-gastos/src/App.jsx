@@ -18,6 +18,7 @@ function toLocal(g) {
     montoParcial: g.monto_parcial,
     moneda: g.moneda ?? 'ARS',
     tipoCambio: g.tipo_cambio ?? null,
+    tipoCambioPago: g.tipo_cambio_pago ?? null,
   }
 }
 
@@ -123,6 +124,13 @@ export default function App() {
 
   async function actualizarEstado(id, nuevoEstado, montoParcial) {
     const update = { estado: nuevoEstado, monto_parcial: montoParcial ?? null }
+    if (nuevoEstado === 'pagado' || nuevoEstado === 'parcial') {
+      try {
+        const res = await fetch('https://api.bluelytics.com.ar/v2/latest')
+        const data = await res.json()
+        update.tipo_cambio_pago = data.oficial.value_sell
+      } catch {}
+    }
     const { error } = await supabase.from('gastos').update(update).eq('id', id)
     if (error) { alert('Error: ' + error.message); return }
     cargarGastos()

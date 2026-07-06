@@ -40,7 +40,10 @@ function MontoCell({ g }) {
         <div className="text-xs text-blue-500 font-mono">≈ {fmtUSD(enUSD)}</div>
       )}
       {g.tipoCambio && (
-        <div className="text-xs text-gray-400">TC ${g.tipoCambio.toLocaleString('es-AR')}</div>
+        <div className="text-xs text-gray-400">TC carga ${g.tipoCambio.toLocaleString('es-AR')}</div>
+      )}
+      {g.tipoCambioPago && (
+        <div className="text-xs text-green-500">TC pago ${g.tipoCambioPago.toLocaleString('es-AR')}</div>
       )}
     </div>
   )
