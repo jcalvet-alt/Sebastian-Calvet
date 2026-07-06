@@ -7,6 +7,7 @@ import Resumen from './components/Resumen'
 import IngresoForm from './components/IngresoForm'
 import IngresoTable from './components/IngresoTable'
 import ResumenIngresos from './components/ResumenIngresos'
+import PagoModal from './components/PagoModal'
 import './index.css'
 
 async function fetchTC() {
@@ -33,13 +34,13 @@ function gastoToRemote(g) {
     moneda: g.moneda ?? 'ARS', tipo_cambio: g.tipoCambio ?? null,
   }
 }
-
 function ingresoToLocal(g) {
   return {
     id: g.id, actividad: g.actividad, concepto: g.concepto, monto: g.monto,
     fecha: g.fecha, formaCobro: g.forma_cobro, estado: g.estado,
     montoParcial: g.monto_parcial, moneda: g.moneda ?? 'ARS',
     tipoCambio: g.tipo_cambio ?? null, tipoCambioCobro: g.tipo_cambio_cobro ?? null,
+    montoUtilizado: g.monto_utilizado ?? 0,
   }
 }
 function ingresoToRemote(g) {
@@ -55,33 +56,35 @@ export default function App() {
   const [tab, setTab] = useState('gastos')
   const [gastos, setGastos] = useState([])
   const [ingresos, setIngresos] = useState([])
+  const [pagos, setPagos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [filtroActividad, setFiltroActividad] = useState('todas')
   const [filtroEstado, setFiltroEstado] = useState('todos')
   const [modalOpen, setModalOpen] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [pagoModal, setPagoModal] = useState(null) // {gasto, estadoInicial}
 
-  const cargarGastos = useCallback(async () => {
-    const { data, error } = await supabase.from('gastos').select('*').order('created_at', { ascending: false })
-    if (error) { setError(error.message); return }
-    setGastos(data.map(gastoToLocal))
+  const cargarTodo = useCallback(async () => {
+    const [rGastos, rIngresos, rPagos] = await Promise.all([
+      supabase.from('gastos').select('*').order('created_at', { ascending: false }),
+      supabase.from('ingresos').select('*').order('created_at', { ascending: false }),
+      supabase.from('pagos').select('*').order('created_at', { ascending: true }),
+    ])
+    if (rGastos.error) { setError(rGastos.error.message); return }
+    setGastos(rGastos.data.map(gastoToLocal))
+    setIngresos(rIngresos.data.map(ingresoToLocal))
+    setPagos(rPagos.data || [])
     setCargando(false)
   }, [])
 
-  const cargarIngresos = useCallback(async () => {
-    const { data, error } = await supabase.from('ingresos').select('*').order('created_at', { ascending: false })
-    if (error) { setError(error.message); return }
-    setIngresos(data.map(ingresoToLocal))
-  }, [])
-
   useEffect(() => {
-    cargarGastos()
-    cargarIngresos()
-    const ch1 = supabase.channel('gastos-ch').on('postgres_changes', { event: '*', schema: 'public', table: 'gastos' }, cargarGastos).subscribe()
-    const ch2 = supabase.channel('ingresos-ch').on('postgres_changes', { event: '*', schema: 'public', table: 'ingresos' }, cargarIngresos).subscribe()
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
-  }, [cargarGastos, cargarIngresos])
+    cargarTodo()
+    const ch1 = supabase.channel('gastos-ch').on('postgres_changes', { event: '*', schema: 'public', table: 'gastos' }, cargarTodo).subscribe()
+    const ch2 = supabase.channel('ingresos-ch').on('postgres_changes', { event: '*', schema: 'public', table: 'ingresos' }, cargarTodo).subscribe()
+    const ch3 = supabase.channel('pagos-ch').on('postgres_changes', { event: '*', schema: 'public', table: 'pagos' }, cargarTodo).subscribe()
+    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); supabase.removeChannel(ch3) }
+  }, [cargarTodo])
 
   // --- GASTOS ---
   async function agregarGasto(gasto) {
@@ -93,12 +96,12 @@ export default function App() {
       const { error } = await supabase.from('gastos').insert(gastoToRemote({ ...gasto, estado: 'impago' }))
       if (error) { alert('Error: ' + error.message); return }
     }
-    setModalOpen(false); cargarGastos()
+    setModalOpen(false); cargarTodo()
   }
 
   async function eliminarGasto(id) {
     if (!confirm('¿Eliminar este gasto?')) return
-    await supabase.from('gastos').delete().eq('id', id); cargarGastos()
+    await supabase.from('gastos').delete().eq('id', id); cargarTodo()
   }
 
   async function actualizarEstadoGasto(id, nuevoEstado, montoParcial) {
@@ -107,9 +110,31 @@ export default function App() {
       const tc = await fetchTC()
       if (tc) update.tipo_cambio_pago = tc
     }
-    const { error } = await supabase.from('gastos').update(update).eq('id', id)
-    if (error) { alert('Error: ' + error.message); return }
-    cargarGastos()
+    await supabase.from('gastos').update(update).eq('id', id)
+    cargarTodo()
+  }
+
+  async function confirmarPago({ estado, montoParcial, imputaciones }) {
+    const gasto = pagoModal.gasto
+    const tc = await fetchTC()
+
+    // Actualizar gasto
+    const updateGasto = { estado, monto_parcial: montoParcial ?? null }
+    if (tc) updateGasto.tipo_cambio_pago = tc
+    await supabase.from('gastos').update(updateGasto).eq('id', gasto.id)
+
+    // Insertar pagos e incrementar monto_utilizado de cada ingreso
+    for (const imp of imputaciones) {
+      await supabase.from('pagos').insert({ gasto_id: gasto.id, ingreso_id: imp.ingreso_id, monto: imp.monto })
+      const ing = ingresos.find(i => i.id === imp.ingreso_id)
+      if (ing) {
+        const nuevoUtilizado = (ing.montoUtilizado || 0) + imp.monto
+        await supabase.from('ingresos').update({ monto_utilizado: nuevoUtilizado }).eq('id', imp.ingreso_id)
+      }
+    }
+
+    setPagoModal(null)
+    cargarTodo()
   }
 
   // --- INGRESOS ---
@@ -122,12 +147,12 @@ export default function App() {
       const { error } = await supabase.from('ingresos').insert(ingresoToRemote({ ...ingreso, estado: 'pendiente' }))
       if (error) { alert('Error: ' + error.message); return }
     }
-    setModalOpen(false); cargarIngresos()
+    setModalOpen(false); cargarTodo()
   }
 
   async function eliminarIngreso(id) {
     if (!confirm('¿Eliminar este ingreso?')) return
-    await supabase.from('ingresos').delete().eq('id', id); cargarIngresos()
+    await supabase.from('ingresos').delete().eq('id', id); cargarTodo()
   }
 
   async function actualizarEstadoIngreso(id, nuevoEstado, montoParcial) {
@@ -136,9 +161,8 @@ export default function App() {
       const tc = await fetchTC()
       if (tc) update.tipo_cambio_cobro = tc
     }
-    const { error } = await supabase.from('ingresos').update(update).eq('id', id)
-    if (error) { alert('Error: ' + error.message); return }
-    cargarIngresos()
+    await supabase.from('ingresos').update(update).eq('id', id)
+    cargarTodo()
   }
 
   // --- EXCEL ---
@@ -150,6 +174,10 @@ export default function App() {
       'Monto USD': g.moneda === 'USD' ? g.monto : (g.tipoCambio ? parseFloat((g.monto / g.tipoCambio).toFixed(2)) : ''),
       'Vencimiento': g.vencimiento || '', 'Forma de pago': g.formaPago,
       'Estado': g.estado === 'pagado' ? 'Pagado' : g.estado === 'parcial' ? 'Pago parcial' : 'Impago',
+      'Ingresos imputados': pagos.filter(p => p.gasto_id === g.id).map(p => {
+        const ing = ingresos.find(i => i.id === p.ingreso_id)
+        return `${ing?.concepto ?? 'Ingreso'}: $${p.monto}`
+      }).join(' | '),
     }))
     const filasin = ingresos.map(g => ({
       'Tipo': 'Ingreso', 'Actividad': g.actividad === 'ganaderia' ? 'Ganadería' : 'Agricultura',
@@ -158,9 +186,10 @@ export default function App() {
       'Monto USD': g.moneda === 'USD' ? g.monto : (g.tipoCambio ? parseFloat((g.monto / g.tipoCambio).toFixed(2)) : ''),
       'Fecha': g.fecha || '', 'Forma de cobro': g.formaCobro,
       'Estado': g.estado === 'cobrado' ? 'Cobrado' : g.estado === 'parcial' ? 'Cobro parcial' : 'Pendiente',
+      'Utilizado': g.montoUtilizado ?? 0,
     }))
     const ws = XLSX.utils.json_to_sheet([...filasg, ...filasin])
-    ws['!cols'] = [10, 14, 30, 10, 14, 12, 12, 12, 14, 16, 14].map(w => ({ wch: w }))
+    ws['!cols'] = [10, 14, 30, 10, 14, 12, 12, 12, 14, 16, 14, 30].map(w => ({ wch: w }))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Gastos e Ingresos')
     XLSX.writeFile(wb, `DosAgro_${new Date().toISOString().slice(0, 10)}.xlsx`)
@@ -194,8 +223,6 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {/* Tabs */}
         <div className="max-w-6xl mx-auto px-4 flex gap-1 pb-0">
           {[['gastos', 'Gastos'], ['ingresos', 'Ingresos']].map(([key, label]) => (
             <button key={key} onClick={() => { setTab(key); setFiltroEstado('todos') }}
@@ -208,11 +235,8 @@ export default function App() {
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-            Error de conexión: {error}
-          </div>
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">Error de conexión: {error}</div>
         )}
-
         {cargando ? (
           <div className="text-center py-16 text-gray-400"><p className="text-sm">Cargando...</p></div>
         ) : (
@@ -251,17 +275,24 @@ export default function App() {
             </div>
 
             {esGastos
-              ? <GastoTable gastos={listaFiltrada} onEliminar={eliminarGasto}
+              ? <GastoTable
+                  gastos={listaFiltrada} pagos={pagos} ingresos={ingresos}
+                  onEliminar={eliminarGasto}
                   onEditar={g => { setEditando(g.id); setModalOpen(true) }}
-                  onActualizarEstado={actualizarEstadoGasto} />
-              : <IngresoTable ingresos={listaFiltrada} onEliminar={eliminarIngreso}
+                  onActualizarEstado={actualizarEstadoGasto}
+                  onAbrirPago={(gasto, estadoInicial) => setPagoModal({ gasto, estadoInicial })}
+                />
+              : <IngresoTable ingresos={listaFiltrada}
+                  onEliminar={eliminarIngreso}
                   onEditar={g => { setEditando(g.id); setModalOpen(true) }}
-                  onActualizarEstado={actualizarEstadoIngreso} />
+                  onActualizarEstado={actualizarEstadoIngreso}
+                />
             }
           </>
         )}
       </main>
 
+      {/* Modal nuevo/editar */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -280,6 +311,16 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de pago con imputación */}
+      {pagoModal && (
+        <PagoModal
+          gasto={pagoModal.gasto}
+          ingresos={ingresos}
+          onConfirmar={confirmarPago}
+          onCancelar={() => setPagoModal(null)}
+        />
       )}
     </div>
   )

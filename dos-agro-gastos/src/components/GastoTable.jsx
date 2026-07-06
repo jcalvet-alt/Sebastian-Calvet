@@ -5,21 +5,14 @@ const BADGE = {
   parcial: 'bg-yellow-100 text-yellow-800',
   impago: 'bg-red-100 text-red-800',
 }
-
-const LABEL = {
-  pagado: 'Pagado',
-  parcial: 'Parcial',
-  impago: 'Impago',
-}
+const LABEL = { pagado: 'Pagado', parcial: 'Parcial', impago: 'Impago' }
 
 function fmtARS(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 }
-
 function fmtUSD(n) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n)
 }
-
 function fmtFecha(f) {
   if (!f) return '—'
   const [y, m, d] = f.split('-')
@@ -27,10 +20,7 @@ function fmtFecha(f) {
 }
 
 function MontoCell({ g }) {
-  const enUSD = g.moneda === 'USD'
-    ? g.monto
-    : (g.tipoCambio ? g.monto / g.tipoCambio : null)
-
+  const enUSD = g.moneda === 'USD' ? g.monto : (g.tipoCambio ? g.monto / g.tipoCambio : null)
   return (
     <div className="text-right">
       <div className="font-mono text-gray-800 font-medium">
@@ -39,82 +29,62 @@ function MontoCell({ g }) {
       {enUSD !== null && g.moneda === 'ARS' && (
         <div className="text-xs text-blue-500 font-mono">≈ {fmtUSD(enUSD)}</div>
       )}
-      {g.tipoCambio && (
-        <div className="text-xs text-gray-400">TC carga ${g.tipoCambio.toLocaleString('es-AR')}</div>
-      )}
-      {g.tipoCambioPago && (
-        <div className="text-xs text-green-500">TC pago ${g.tipoCambioPago.toLocaleString('es-AR')}</div>
-      )}
+      {g.tipoCambio && <div className="text-xs text-gray-400">TC carga ${g.tipoCambio.toLocaleString('es-AR')}</div>}
+      {g.tipoCambioPago && <div className="text-xs text-green-500">TC pago ${g.tipoCambioPago.toLocaleString('es-AR')}</div>}
     </div>
   )
 }
 
-function EstadoCell({ gasto, onActualizarEstado }) {
+function EstadoCell({ gasto, onActualizarEstado, onAbrirPago }) {
   const [open, setOpen] = useState(false)
-  const [montoParcialInput, setMontoParcialInput] = useState('')
 
   function aplicar(estado) {
-    if (estado === 'parcial') { setOpen('parcial'); return }
-    onActualizarEstado(gasto.id, estado, null)
     setOpen(false)
-  }
-
-  function confirmarParcial() {
-    const val = parseFloat(montoParcialInput)
-    if (!val || val <= 0) return
-    onActualizarEstado(gasto.id, 'parcial', val)
-    setOpen(false)
-    setMontoParcialInput('')
+    if (estado === 'pagado' || estado === 'parcial') {
+      onAbrirPago(gasto, estado)
+    } else {
+      onActualizarEstado(gasto.id, estado, null)
+    }
   }
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen(v => v ? false : 'menu')}
-        className={`px-2 py-1 rounded-full text-xs font-semibold ${BADGE[gasto.estado]} cursor-pointer hover:opacity-80 transition whitespace-nowrap`}
-      >
+      <button onClick={() => setOpen(v => !v)}
+        className={`px-2 py-1 rounded-full text-xs font-semibold ${BADGE[gasto.estado]} cursor-pointer hover:opacity-80 transition whitespace-nowrap`}>
         {LABEL[gasto.estado]}
         {gasto.estado === 'parcial' && gasto.montoParcial ? ` ${fmtARS(gasto.montoParcial)}` : ''}
       </button>
-
-      {open === 'menu' && (
+      {open && (
         <div className="absolute z-20 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-36 right-0">
           {['pagado', 'parcial', 'impago'].map(e => (
-            <button
-              key={e}
-              onClick={() => aplicar(e)}
-              className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg font-medium ${BADGE[e]}`}
-            >
+            <button key={e} onClick={() => aplicar(e)}
+              className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg font-medium ${BADGE[e]}`}>
               {LABEL[e]}
             </button>
           ))}
         </div>
       )}
-
-      {open === 'parcial' && (
-        <div className="absolute z-20 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 right-0 min-w-44">
-          <p className="text-xs text-gray-600 mb-2 font-medium">Monto pagado</p>
-          <input
-            type="number"
-            autoFocus
-            value={montoParcialInput}
-            onChange={e => setMontoParcialInput(e.target.value)}
-            placeholder="0"
-            min="0"
-            step="0.01"
-            className="w-full border border-gray-300 rounded px-2 py-1 text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-          <div className="flex gap-2">
-            <button onClick={() => setOpen(false)} className="flex-1 text-xs border border-gray-300 rounded py-1 hover:bg-gray-50">Cancelar</button>
-            <button onClick={confirmarParcial} className="flex-1 text-xs bg-green-700 text-white rounded py-1 hover:bg-green-800">OK</button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-export default function GastoTable({ gastos, onEliminar, onEditar, onActualizarEstado }) {
+function PagosImputados({ pagos, ingresos }) {
+  if (!pagos || pagos.length === 0) return null
+  return (
+    <div className="mt-1 space-y-0.5">
+      {pagos.map(p => {
+        const ing = ingresos.find(i => i.id === p.ingreso_id)
+        return (
+          <div key={p.id} className="text-xs text-indigo-600 bg-indigo-50 rounded px-2 py-0.5 inline-block mr-1">
+            ← {ing ? ing.concepto : 'Ingreso'}: {fmtARS(p.monto)}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function GastoTable({ gastos, pagos, ingresos, onEliminar, onEditar, onActualizarEstado, onAbrirPago }) {
   if (gastos.length === 0) {
     return (
       <div className="text-center py-16 text-gray-400">
@@ -123,6 +93,10 @@ export default function GastoTable({ gastos, onEliminar, onEditar, onActualizarE
         <p className="text-xs mt-1">Presioná "+ Nuevo gasto" para comenzar.</p>
       </div>
     )
+  }
+
+  function pagosDeGasto(gastoId) {
+    return (pagos || []).filter(p => p.gasto_id === gastoId)
   }
 
   return (
@@ -149,12 +123,15 @@ export default function GastoTable({ gastos, onEliminar, onEditar, onActualizarE
                     {g.actividad === 'ganaderia' ? 'Ganadería' : 'Agricultura'}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-800">{g.concepto}</td>
+                <td className="px-4 py-3">
+                  <div className="font-medium text-gray-800">{g.concepto}</div>
+                  <PagosImputados pagos={pagosDeGasto(g.id)} ingresos={ingresos || []} />
+                </td>
                 <td className="px-4 py-3"><MontoCell g={g} /></td>
                 <td className="px-4 py-3 text-center text-gray-600">{fmtFecha(g.vencimiento)}</td>
                 <td className="px-4 py-3 text-gray-600">{g.formaPago}</td>
                 <td className="px-4 py-3 text-center">
-                  <EstadoCell gasto={g} onActualizarEstado={onActualizarEstado} />
+                  <EstadoCell gasto={g} onActualizarEstado={onActualizarEstado} onAbrirPago={onAbrirPago} />
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => onEditar(g)} className="text-gray-400 hover:text-blue-600 mr-2 transition" title="Editar">✏️</button>
@@ -179,10 +156,13 @@ export default function GastoTable({ gastos, onEliminar, onEditar, onActualizarE
                 <button onClick={() => onEliminar(g.id)} className="text-gray-400 hover:text-red-600 transition">🗑️</button>
               </div>
             </div>
-            <p className="font-semibold text-gray-800">{g.concepto}</p>
+            <div>
+              <p className="font-semibold text-gray-800">{g.concepto}</p>
+              <PagosImputados pagos={pagosDeGasto(g.id)} ingresos={ingresos || []} />
+            </div>
             <div className="flex items-center justify-between">
               <MontoCell g={g} />
-              <EstadoCell gasto={g} onActualizarEstado={onActualizarEstado} />
+              <EstadoCell gasto={g} onActualizarEstado={onActualizarEstado} onAbrirPago={onAbrirPago} />
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>Venc: {fmtFecha(g.vencimiento)}</span>
