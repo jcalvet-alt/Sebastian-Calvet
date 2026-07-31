@@ -21,16 +21,21 @@ export default function ResumenIngresos({ ingresos }) {
     ingresos.filter(g => g.moneda === 'USD').reduce((s, g) => s + g.monto, 0) +
     ingresos.filter(g => g.moneda === 'ARS' && g.tipoCambio).reduce((s, g) => s + g.monto / g.tipoCambio, 0)
 
+  const pendienteUnificadoUSD =
+    ingresos.filter(g => g.moneda === 'USD').reduce((s, g) => s + montoPendiente(g), 0) +
+    ingresos.filter(g => g.moneda === 'ARS' && g.tipoCambio).reduce((s, g) => s + montoPendiente(g) / g.tipoCambio, 0)
+
   const cards = [
     { label: 'Total ingresos en $', valor: fmtARS(totalARS), color: 'text-gray-800', bg: 'bg-white' },
     { label: 'Total ingresos en U$S', valor: fmtUSD(totalUSD), color: 'text-blue-700', bg: 'bg-blue-50' },
     { label: 'Pendiente de cobro en $', valor: fmtARS(pendienteARS), color: 'text-orange-700', bg: 'bg-orange-50' },
     { label: 'Pendiente de cobro en U$S', valor: fmtUSD(pendienteUSD), color: 'text-orange-700', bg: 'bg-orange-50' },
     { label: 'Total $ + U$S en USD', valor: fmtUSD(totalUnificadoUSD), color: 'text-indigo-700', bg: 'bg-indigo-50', sub: 'ARS conv. al TC de cada ingreso' },
+    { label: 'Pendiente cobro en USD', valor: fmtUSD(pendienteUnificadoUSD), color: 'text-red-700', bg: 'bg-red-50', sub: 'ARS conv. al TC de cada ingreso' },
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
       {cards.map(c => (
         <div key={c.label} className={`${c.bg} rounded-xl p-4 shadow-sm border border-gray-100`}>
           <p className="text-xs text-gray-500 font-medium mb-1">{c.label}</p>
