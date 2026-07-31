@@ -6,12 +6,16 @@ function fmtUSD(n) {
 }
 
 export default function Resumen({ gastos }) {
-  const impagos = gastos.filter(g => g.estado === 'impago')
+  function montoPendiente(g) {
+    if (g.estado === 'pagado') return 0
+    if (g.estado === 'parcial') return g.monto - (g.montoParcial || 0)
+    return g.monto
+  }
 
   const totalARS = gastos.filter(g => g.moneda === 'ARS').reduce((s, g) => s + g.monto, 0)
   const totalUSD = gastos.filter(g => g.moneda === 'USD').reduce((s, g) => s + g.monto, 0)
-  const impagoARS = impagos.filter(g => g.moneda === 'ARS').reduce((s, g) => s + g.monto, 0)
-  const impagoUSD = impagos.filter(g => g.moneda === 'USD').reduce((s, g) => s + g.monto, 0)
+  const impagoARS = gastos.filter(g => g.moneda === 'ARS').reduce((s, g) => s + montoPendiente(g), 0)
+  const impagoUSD = gastos.filter(g => g.moneda === 'USD').reduce((s, g) => s + montoPendiente(g), 0)
 
   // Total unificado en USD: USD directo + ARS convertidos al TC del gasto
   const totalUnificadoUSD =

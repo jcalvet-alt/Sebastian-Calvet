@@ -6,12 +6,16 @@ function fmtUSD(n) {
 }
 
 export default function ResumenIngresos({ ingresos }) {
-  const pendientes = ingresos.filter(g => g.estado === 'pendiente')
+  function montoPendiente(g) {
+    if (g.estado === 'cobrado') return 0
+    if (g.estado === 'parcial') return g.monto - (g.montoParcial || 0)
+    return g.monto
+  }
 
   const totalARS = ingresos.filter(g => g.moneda === 'ARS').reduce((s, g) => s + g.monto, 0)
   const totalUSD = ingresos.filter(g => g.moneda === 'USD').reduce((s, g) => s + g.monto, 0)
-  const pendienteARS = pendientes.filter(g => g.moneda === 'ARS').reduce((s, g) => s + g.monto, 0)
-  const pendienteUSD = pendientes.filter(g => g.moneda === 'USD').reduce((s, g) => s + g.monto, 0)
+  const pendienteARS = ingresos.filter(g => g.moneda === 'ARS').reduce((s, g) => s + montoPendiente(g), 0)
+  const pendienteUSD = ingresos.filter(g => g.moneda === 'USD').reduce((s, g) => s + montoPendiente(g), 0)
 
   const totalUnificadoUSD =
     ingresos.filter(g => g.moneda === 'USD').reduce((s, g) => s + g.monto, 0) +
