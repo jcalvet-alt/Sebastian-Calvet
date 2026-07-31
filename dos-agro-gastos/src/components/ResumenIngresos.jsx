@@ -31,7 +31,7 @@ export default function ResumenIngresos({ ingresos }) {
     { label: 'Pendiente de cobro en $', valor: fmtARS(pendienteARS), color: 'text-orange-700', bg: 'bg-orange-50' },
     { label: 'Pendiente de cobro en U$S', valor: fmtUSD(pendienteUSD), color: 'text-orange-700', bg: 'bg-orange-50' },
     { label: 'Total $ + U$S en USD', valor: fmtUSD(totalUnificadoUSD), color: 'text-indigo-700', bg: 'bg-indigo-50', sub: 'ARS conv. al TC de cada ingreso' },
-    { label: 'Pendiente cobro en USD', valor: fmtUSD(pendienteUnificadoUSD), color: 'text-red-700', bg: 'bg-red-50', sub: 'ARS conv. al TC de cada ingreso' },
+    { label: 'Pendiente cobro $ + U$S en USD', valor: fmtUSD(pendienteUnificadoUSD), color: 'text-red-700', bg: 'bg-red-50', sub: 'ARS conv. al TC de cada ingreso' },
   ]
 
   return (
